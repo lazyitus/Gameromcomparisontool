@@ -22,6 +22,156 @@ interface RomListUploaderProps {
 
 export type { RomList };
 
+// Comprehensive system name mapping based on RetroBat wiki
+const SYSTEM_ALIASES: Record<string, string[]> = {
+  // Nintendo Systems
+  'nes': ['nintendo entertainment system', 'famicom', 'fc', 'famicon'],
+  'snes': ['super nintendo', 'super famicom', 'sfc', 'super nes'],
+  'n64': ['nintendo 64', 'nintendo64'],
+  'gamecube': ['gc', 'ngc', 'nintendo gamecube'],
+  'wii': ['nintendo wii'],
+  'wiiu': ['wii u', 'nintendo wii u'],
+  'switch': ['nintendo switch', 'nswitch'],
+  'gb': ['game boy', 'gameboy'],
+  'gbc': ['game boy color', 'gameboy color', 'game boy colour'],
+  'gba': ['game boy advance', 'gameboy advance'],
+  'nds': ['nintendo ds', 'ds'],
+  '3ds': ['nintendo 3ds', 'n3ds'],
+  'virtualboy': ['virtual boy', 'vb'],
+  'pokemon mini': ['pokemini'],
+  
+  // Sega Systems
+  'mastersystem': ['master system', 'sms', 'sega master system'],
+  'megadrive': ['genesis', 'sega genesis', 'sega mega drive', 'md', 'gen'],
+  'segacd': ['mega cd', 'sega cd', 'megacd'],
+  'sega32x': ['32x', 'genesis 32x', 'mega drive 32x'],
+  'saturn': ['sega saturn', 'ss'],
+  'dreamcast': ['dc', 'sega dreamcast'],
+  'gamegear': ['game gear', 'gg', 'sega game gear'],
+  'sg-1000': ['sg1000', 'sega sg-1000'],
+  
+  // Sony Systems
+  'psx': ['playstation', 'ps1', 'playstation 1', 'sony playstation'],
+  'ps2': ['playstation 2', 'sony playstation 2'],
+  'ps3': ['playstation 3', 'sony playstation 3'],
+  'psp': ['playstation portable', 'sony psp'],
+  'psvita': ['ps vita', 'vita', 'playstation vita'],
+  
+  // Microsoft Systems
+  'xbox': ['microsoft xbox'],
+  'xbox360': ['xbox 360', 'x360'],
+  
+  // Atari Systems
+  'atari2600': ['2600', 'atari 2600', 'atari2600'],
+  'atari5200': ['5200', 'atari 5200'],
+  'atari7800': ['7800', 'atari 7800'],
+  'atarijaguar': ['jaguar', 'atari jaguar'],
+  'atarilynx': ['lynx', 'atari lynx'],
+  'atarist': ['atari st', 'st'],
+  
+  // Neo Geo
+  'neogeo': ['neo geo', 'neo-geo', 'aes', 'neo geo aes'],
+  'neogeocd': ['neo geo cd', 'neo-geo cd', 'neocd'],
+  'neogeopocket': ['ngp', 'neo geo pocket'],
+  'neogeopocketcolor': ['ngpc', 'neo geo pocket color'],
+  
+  // PC Engine / TurboGrafx
+  'pcengine': ['pc engine', 'tg16', 'turbografx', 'turbografx-16', 'turbografx 16'],
+  'pcenginecd': ['pc engine cd', 'tg-cd', 'turbografx cd'],
+  'supergrafx': ['super grafx', 'sgfx'],
+  
+  // 3DO
+  '3do': ['3do interactive multiplayer', 'panasonic 3do'],
+  
+  // MSX
+  'msx': ['msx1'],
+  'msx2': ['msx 2'],
+  
+  // Computers
+  'amiga': ['commodore amiga'],
+  'amigacd32': ['amiga cd32', 'cd32'],
+  'c64': ['commodore 64', 'c-64'],
+  'dos': ['pc', 'ibm pc', 'msdos', 'ms-dos'],
+  'amstradcpc': ['amstrad cpc', 'cpc'],
+  'zxspectrum': ['zx spectrum', 'spectrum'],
+  
+  // Arcade
+  'mame': ['arcade', 'mame2003', 'mame2010', 'fbneo', 'fba'],
+  'cps1': ['capcom play system', 'cp system'],
+  'cps2': ['capcom play system 2', 'cp system ii'],
+  'cps3': ['capcom play system 3', 'cp system iii'],
+  'naomi': ['sega naomi'],
+  
+  // Other Systems
+  'wonderswan': ['ws', 'bandai wonderswan'],
+  'wonderswancolor': ['wsc', 'wonderswan color'],
+  'vectrex': ['gce vectrex'],
+  'intellivision': ['mattel intellivision'],
+  'colecovision': ['coleco vision'],
+  'odyssey2': ['odyssey 2', 'videopac', 'magnavox odyssey 2'],
+  'channelf': ['fairchild channel f', 'channel f'],
+};
+
+// Normalize a system name to match against aliases
+const normalizeSystemName = (name: string): string => {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '') // Remove special characters
+    .replace(/\s+/g, '');
+};
+
+// Find matching system using comprehensive alias matching
+const findMatchingSystem = (filename: string, datFiles: DatFile[]): string | null => {
+  const filenameLower = filename.toLowerCase().replace('.txt', '');
+  const filenameNormalized = normalizeSystemName(filename);
+  
+  for (const datFile of datFiles) {
+    const systemLower = datFile.system.toLowerCase();
+    const systemNormalized = normalizeSystemName(datFile.system);
+    
+    // Direct match (case-insensitive)
+    if (filenameLower.includes(systemLower) || systemLower.includes(filenameLower)) {
+      return datFile.system;
+    }
+    
+    // Normalized match
+    if (filenameNormalized.includes(systemNormalized) || systemNormalized.includes(filenameNormalized)) {
+      return datFile.system;
+    }
+    
+    // Check aliases
+    for (const [canonical, aliases] of Object.entries(SYSTEM_ALIASES)) {
+      const canonicalNormalized = normalizeSystemName(canonical);
+      
+      // Check if DAT system matches canonical name or any alias
+      const datMatchesCanonical = 
+        systemNormalized.includes(canonicalNormalized) ||
+        canonicalNormalized.includes(systemNormalized) ||
+        aliases.some(alias => {
+          const aliasNormalized = normalizeSystemName(alias);
+          return systemNormalized.includes(aliasNormalized) || aliasNormalized.includes(systemNormalized);
+        });
+      
+      if (datMatchesCanonical) {
+        // Check if filename matches canonical name or any alias
+        const filenameMatchesCanonical =
+          filenameNormalized.includes(canonicalNormalized) ||
+          canonicalNormalized.includes(filenameNormalized) ||
+          aliases.some(alias => {
+            const aliasNormalized = normalizeSystemName(alias);
+            return filenameNormalized.includes(aliasNormalized) || aliasNormalized.includes(filenameNormalized);
+          });
+        
+        if (filenameMatchesCanonical) {
+          return datFile.system;
+        }
+      }
+    }
+  }
+  
+  return null;
+};
+
 export function RomListUploader({ onRomsLoaded, romLists, datFiles }: RomListUploaderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -64,18 +214,7 @@ export function RomListUploader({ onRomsLoaded, romLists, datFiles }: RomListUpl
       // If we have DAT files, try to auto-match based on filename
       if (datFiles.length > 0) {
         const assignments = fileData.map(({ name, content }) => {
-          // Try to find matching system from DAT files
-          let matchedSystem = null;
-          
-          for (const datFile of datFiles) {
-            const systemLower = datFile.system.toLowerCase();
-            const nameLower = name.toLowerCase();
-            
-            if (nameLower.includes(systemLower) || systemLower.includes(nameLower.replace('.txt', ''))) {
-              matchedSystem = datFile.system;
-              break;
-            }
-          }
+          const matchedSystem = findMatchingSystem(name, datFiles);
           
           return {
             filename: name,
@@ -115,18 +254,7 @@ export function RomListUploader({ onRomsLoaded, romLists, datFiles }: RomListUpl
       // If we have DAT files, try to auto-match based on filename
       if (datFiles.length > 0) {
         const assignments = fileData.map(({ name, content }) => {
-          // Try to find matching system from DAT files
-          let matchedSystem = null;
-          
-          for (const datFile of datFiles) {
-            const systemLower = datFile.system.toLowerCase();
-            const nameLower = name.toLowerCase();
-            
-            if (nameLower.includes(systemLower) || systemLower.includes(nameLower.replace('.txt', ''))) {
-              matchedSystem = datFile.system;
-              break;
-            }
-          }
+          const matchedSystem = findMatchingSystem(name, datFiles);
           
           return {
             filename: name,
@@ -170,6 +298,11 @@ export function RomListUploader({ onRomsLoaded, romLists, datFiles }: RomListUpl
 
   const cancelAssignments = () => {
     setPendingAssignments([]);
+  };
+
+  const removePendingAssignment = (index: number) => {
+    const updated = pendingAssignments.filter((_, i) => i !== index);
+    setPendingAssignments(updated);
   };
 
   const removeRomList = (index: number) => {
@@ -249,6 +382,13 @@ export function RomListUploader({ onRomsLoaded, romLists, datFiles }: RomListUpl
                         </SelectContent>
                       </Select>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removePendingAssignment(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
                 );
               })}
@@ -256,8 +396,8 @@ export function RomListUploader({ onRomsLoaded, romLists, datFiles }: RomListUpl
             <div className="flex gap-2">
               <Button
                 onClick={confirmAssignments}
-                className="flex-1"
-                disabled={!pendingAssignments.every(a => a.systemName)}
+                className="flex-1 neon-button"
+                disabled={pendingAssignments.filter(a => a.systemName).length === 0}
               >
                 Confirm {pendingAssignments.filter(a => a.systemName).length} Assignment(s)
               </Button>
