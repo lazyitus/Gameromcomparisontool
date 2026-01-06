@@ -5,9 +5,11 @@ export default defineConfig({
   build: {
     outDir: 'dist-electron',
     lib: {
-      entry: 'electron/main.js',
+      entry: {
+        main: 'electron/main.js',
+        preload: 'electron/preload.js',
+      },
       formats: ['es'],
-      fileName: () => 'main.js',
     },
     rollupOptions: {
       external: [
@@ -15,6 +17,9 @@ export default defineConfig({
         ...builtinModules,
         ...builtinModules.map(m => `node:${m}`),
       ],
+      output: {
+        entryFileNames: '[name].js',
+      },
     },
     emptyOutDir: true,
   },
