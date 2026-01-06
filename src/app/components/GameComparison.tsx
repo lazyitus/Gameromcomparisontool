@@ -187,11 +187,25 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
   const [releaseTypeFilter, setReleaseTypeFilter] = useState<'all' | 'official' | 'unofficial'>('all');
   const [revisionFilter, setRevisionFilter] = useState<'all' | 'base' | 'revisions'>('all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [isMatching, setIsMatching] = useState(false);
+  const [matchProgress, setMatchProgress] = useState({ current: 0, total: 0, system: '' });
 
   // Compare ROMs with DAT files
   const comparison = useMemo(() => {
     const results: GameMatch[] = [];
+    let totalGames = 0;
+    let processedGames = 0;
 
+    // Calculate total games for progress
+    datFiles.forEach(datFile => {
+      totalGames += datFile.games.length;
+    });
+
+    // Set initial state
+    setIsMatching(true);
+    setMatchProgress({ current: 0, total: totalGames, system: '' });
+
+    // Process each system
     datFiles.forEach(datFile => {
       // Find the ROM list for this system
       const romList = romLists.find(list => list.systemName === datFile.system);
@@ -274,8 +288,15 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
           systemName: datFile.system,
           alternateRegions: alternateRegions.length > 0 ? alternateRegions : undefined,
         });
+
+        // Update progress
+        processedGames++;
+        setMatchProgress({ current: processedGames, total: totalGames, system: datFile.system });
       });
     });
+
+    // Matching complete
+    setIsMatching(false);
 
     return results;
   }, [datFiles, romLists]); // Removed getBaseGameName from dependencies
@@ -392,6 +413,44 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     return (
       <Card className="p-8 text-center">
         <p className="text-muted-foreground">Upload DAT files to start comparing your collection</p>
+      </Card>
+    );
+  }
+
+  // Show loading overlay while matching
+  if (isMatching) {
+    return (
+      <Card className="p-8 neon-card">
+        <div className="space-y-4 text-center">
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-t-2 border-primary" style={{
+              borderColor: 'var(--neon-pink)',
+              boxShadow: '0 0 20px var(--neon-pink)'
+            }}></div>
+          </div>
+          <div>
+            <h3 className="text-xl font-bold mb-2 stat-glow-cyan">MATCHING ROMs...</h3>
+            <p className="text-muted-foreground mb-4">
+              Processing {matchProgress.system}
+            </p>
+            <div className="max-w-md mx-auto">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="stat-glow-pink">{matchProgress.current.toLocaleString()} / {matchProgress.total.toLocaleString()} games</span>
+                <span className="stat-glow-green">{matchProgress.total > 0 ? Math.round((matchProgress.current / matchProgress.total) * 100) : 0}%</span>
+              </div>
+              <div className="w-full bg-background/50 rounded-full h-3 overflow-hidden border border-primary/30">
+                <div 
+                  className="h-full transition-all duration-300 rounded-full"
+                  style={{
+                    width: `${matchProgress.total > 0 ? (matchProgress.current / matchProgress.total) * 100 : 0}%`,
+                    background: 'linear-gradient(90deg, var(--neon-pink), var(--neon-cyan), var(--neon-purple))',
+                    boxShadow: '0 0 10px var(--neon-cyan)',
+                  }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </Card>
     );
   }
