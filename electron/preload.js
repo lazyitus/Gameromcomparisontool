@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
+console.log('🔧 Preload script is running!');
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -15,3 +17,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Select individual ROM list files
   selectRomListFiles: () => ipcRenderer.invoke('select-romlist-files'),
 });
+
+console.log('✅ electronAPI exposed to window object');

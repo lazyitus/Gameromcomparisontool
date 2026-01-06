@@ -9,6 +9,13 @@ import { Separator } from './components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 
 export default function App() {
+  // Debug: Check if Electron API is available
+  useEffect(() => {
+    console.log('🔍 Checking for Electron API...');
+    console.log('window.electronAPI:', window.electronAPI);
+    console.log('Available methods:', window.electronAPI ? Object.keys(window.electronAPI) : 'NOT AVAILABLE');
+  }, []);
+
   const [datFiles, setDatFiles] = useState<DatFile[]>([]);
   const [romLists, setRomLists] = useState<RomList[]>([]);
   const [activeTab, setActiveTab] = useState('collection');

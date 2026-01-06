@@ -9,7 +9,7 @@ export default defineConfig({
         main: 'electron/main.js',
         preload: 'electron/preload.js',
       },
-      formats: ['es'],
+      formats: ['cjs'],
     },
     rollupOptions: {
       external: [
