@@ -1,0 +1,93 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+/* 🕹️ ARCADE NEON EFFECTS 🕹️ */
+
+/* Neon glow for cards */
+.neon-card {
+  border: 2px solid var(--neon-purple);
+  box-shadow: 
+    0 0 10px var(--neon-purple),
+    0 0 20px var(--neon-purple),
+    inset 0 0 10px rgba(157, 0, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.neon-card:hover {
+  border-color: var(--neon-pink);
+  box-shadow: 
+    0 0 15px var(--neon-pink),
+    0 0 30px var(--neon-pink),
+    inset 0 0 15px rgba(255, 0, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Neon buttons */
+.neon-button {
+  border: 2px solid var(--neon-cyan);
+  box-shadow: 
+    0 0 10px var(--neon-cyan),
+    0 0 20px var(--neon-cyan);
+  text-shadow: 0 0 5px var(--neon-cyan);
+  transition: all 0.3s ease;
+}
+
+.neon-button:hover {
+  box-shadow: 
+    0 0 15px var(--neon-cyan),
+    0 0 30px var(--neon-cyan),
+    0 0 40px var(--neon-cyan);
+  transform: scale(1.05);
+}
+
+/* Neon badge glow */
+.neon-badge {
+  box-shadow: 0 0 8px currentColor;
+  text-shadow: 0 0 5px currentColor;
+}
+
+/* Stats glow */
+.stat-glow-green {
+  text-shadow: 
+    0 0 10px var(--neon-green),
+    0 0 20px var(--neon-green);
+  color: var(--neon-green);
+}
+
+.stat-glow-red {
+  text-shadow: 
+    0 0 10px #ff0055,
+    0 0 20px #ff0055;
+  color: #ff0055;
+}
+
+.stat-glow-cyan {
+  text-shadow: 
+    0 0 10px var(--neon-cyan),
+    0 0 20px var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+
+.stat-glow-pink {
+  text-shadow: 
+    0 0 10px var(--neon-pink),
+    0 0 20px var(--neon-pink);
+  color: var(--neon-pink);
+}
+
+.stat-glow-purple {
+  text-shadow: 
+    0 0 10px var(--neon-purple),
+    0 0 20px var(--neon-purple);
+  color: var(--neon-purple);
+}
+
+/* Neon tab styling */
+[data-slot="tabs-trigger"][data-state="active"] {
+  border-color: var(--neon-cyan) !important;
+  box-shadow: 0 0 15px var(--neon-cyan) !important;
+  text-shadow: 0 0 10px var(--neon-cyan) !important;
+  color: var(--neon-cyan) !important;
+  background-color: rgba(0, 255, 255, 0.1) !important;
+}
