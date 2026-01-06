@@ -4,7 +4,7 @@
   "description": "Desktop ROM collection manager with DAT file support",
   "private": true,
   "version": "1.0.0",
-  "main": "dist-electron/main.js",
+  "main": "dist-electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -18,7 +18,7 @@ export default defineConfig({
         ...builtinModules.map(m => `node:${m}`),
       ],
       output: {
-        entryFileNames: '[name].js',
+        entryFileNames: '[name].cjs',
       },
     },
     emptyOutDir: true,
