@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { CheckCircle2, XCircle, Star, Search, Filter, Download, LayoutGrid, Table } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { CheckCircle2, XCircle, Star, Search, Filter, Download, LayoutGrid, Table, Gamepad2 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -187,119 +187,173 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
   const [releaseTypeFilter, setReleaseTypeFilter] = useState<'all' | 'official' | 'unofficial'>('all');
   const [revisionFilter, setRevisionFilter] = useState<'all' | 'base' | 'revisions'>('all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
-  const [isMatching, setIsMatching] = useState(false);
+  
+  // Persist matching state and results
+  const [matchingState, setMatchingState] = useState<'idle' | 'matching' | 'complete'>(() => {
+    const saved = localStorage.getItem('matchingState');
+    return (saved as 'idle' | 'matching' | 'complete') || 'idle';
+  });
+  
   const [matchProgress, setMatchProgress] = useState({ current: 0, total: 0, system: '' });
+  
+  const [comparisonResults, setComparisonResults] = useState<GameMatch[]>(() => {
+    const saved = localStorage.getItem('comparisonResults');
+    return saved ? JSON.parse(saved) : [];
+  });
 
-  // Compare ROMs with DAT files
-  const comparison = useMemo(() => {
-    const results: GameMatch[] = [];
-    let totalGames = 0;
-    let processedGames = 0;
+  // Save matching state to localStorage
+  useEffect(() => {
+    localStorage.setItem('matchingState', matchingState);
+  }, [matchingState]);
 
-    // Calculate total games for progress
-    datFiles.forEach(datFile => {
-      totalGames += datFile.games.length;
+  // Save comparison results to localStorage
+  useEffect(() => {
+    if (comparisonResults.length > 0) {
+      localStorage.setItem('comparisonResults', JSON.stringify(comparisonResults));
+    }
+  }, [comparisonResults]);
+
+  // Reset matching state when DAT files or ROM lists change
+  useEffect(() => {
+    // Create a hash of the current data to detect changes
+    const currentHash = JSON.stringify({
+      datCount: datFiles.length,
+      romCount: romLists.length,
+      systems: [...datFiles.map(d => d.system), ...romLists.map(r => r.systemName)].sort().join(',')
     });
+    
+    const savedHash = localStorage.getItem('dataHash');
+    
+    if (savedHash !== currentHash) {
+      // Data has changed, reset matching
+      setMatchingState('idle');
+      setComparisonResults([]);
+      localStorage.setItem('dataHash', currentHash);
+      localStorage.removeItem('comparisonResults');
+    }
+  }, [datFiles, romLists]);
 
-    // Set initial state
-    setIsMatching(true);
-    setMatchProgress({ current: 0, total: totalGames, system: '' });
+  // Start matching process
+  const startMatching = async () => {
+    setMatchingState('matching');
+    
+    // Use setTimeout to allow UI to update before heavy computation
+    setTimeout(() => {
+      const results: GameMatch[] = [];
+      let totalGames = 0;
+      let processedGames = 0;
 
-    // Process each system
-    datFiles.forEach(datFile => {
-      // Find the ROM list for this system
-      const romList = romLists.find(list => list.systemName === datFile.system);
-      const romFiles = romList ? romList.roms : [];
+      // Calculate total games for progress
+      datFiles.forEach(datFile => {
+        totalGames += datFile.games.length;
+      });
 
-      datFile.games.forEach(game => {
-        let hasRom = false;
-        let matchedRom: RomFile | undefined;
-        let matchMethod: 'filename' | 'exact' | undefined;
+      setMatchProgress({ current: 0, total: totalGames, system: '' });
 
-        // Try to match by filename (only against ROMs for this system)
-        if (game.rom?.name) {
-          const exactMatch = romFiles.find(rom => rom.name === game.rom!.name);
-          if (exactMatch) {
-            hasRom = true;
-            matchedRom = exactMatch;
-            matchMethod = 'exact';
-          } else {
-            // Try improved fuzzy matching with the new algorithm
-            const fuzzyMatch = romFiles.find(rom => matchRomToGame(rom.name, game.rom!.name));
-            if (fuzzyMatch) {
+      // Process each system
+      datFiles.forEach(datFile => {
+        // Find the ROM list for this system
+        const romList = romLists.find(list => list.systemName === datFile.system);
+        const romFiles = romList ? romList.roms : [];
+
+        setMatchProgress({ current: processedGames, total: totalGames, system: datFile.system });
+
+        datFile.games.forEach(game => {
+          let hasRom = false;
+          let matchedRom: RomFile | undefined;
+          let matchMethod: 'filename' | 'exact' | undefined;
+
+          // Try to match by filename (only against ROMs for this system)
+          if (game.rom?.name) {
+            const exactMatch = romFiles.find(rom => rom.name === game.rom!.name);
+            if (exactMatch) {
               hasRom = true;
-              matchedRom = fuzzyMatch;
-              matchMethod = 'filename';
+              matchedRom = exactMatch;
+              matchMethod = 'exact';
+            } else {
+              // Try improved fuzzy matching with the new algorithm
+              const fuzzyMatch = romFiles.find(rom => matchRomToGame(rom.name, game.rom!.name));
+              if (fuzzyMatch) {
+                hasRom = true;
+                matchedRom = fuzzyMatch;
+                matchMethod = 'filename';
+              }
             }
           }
-        }
 
-        // NEW: Find alternate regions for this game
-        const alternateRegions: { region: string; hasRom: boolean }[] = [];
-        const baseName = getBaseGameName(game.name || game.description || '');
-        
-        // Search all games in the same system for matches with different regions
-        datFile.games.forEach(otherGame => {
-          if (otherGame.region && otherGame.region !== game.region) {
-            const otherBaseName = getBaseGameName(otherGame.name || otherGame.description || '');
-            // If base names match, this is the same game in a different region
-            if (baseName === otherBaseName) {
-              // Check if we have a ROM for this alternate region - be SPECIFIC about the region
-              let hasAlternateRom = false;
-              
-              if (otherGame.rom?.name) {
-                // First try exact match
-                const exactMatch = romFiles.find(rom => rom.name === otherGame.rom!.name);
-                if (exactMatch) {
-                  hasAlternateRom = true;
-                } else {
-                  // Try fuzzy match but keep the region in the comparison
-                  const fuzzyMatch = romFiles.find(rom => {
-                    // Normalize but DON'T strip region tags - we need to preserve them
-                    const romNormalized = normalizeForMatching(rom.name);
-                    const gameNormalized = normalizeForMatching(otherGame.rom!.name);
-                    return romNormalized === gameNormalized;
-                  });
-                  if (fuzzyMatch) {
+          // NEW: Find alternate regions for this game
+          const alternateRegions: { region: string; hasRom: boolean }[] = [];
+          const baseName = getBaseGameName(game.name || game.description || '');
+          
+          // Search all games in the same system for matches with different regions
+          datFile.games.forEach(otherGame => {
+            if (otherGame.region && otherGame.region !== game.region) {
+              const otherBaseName = getBaseGameName(otherGame.name || otherGame.description || '');
+              // If base names match, this is the same game in a different region
+              if (baseName === otherBaseName) {
+                // Check if we have a ROM for this alternate region - be SPECIFIC about the region
+                let hasAlternateRom = false;
+                
+                if (otherGame.rom?.name) {
+                  // First try exact match
+                  const exactMatch = romFiles.find(rom => rom.name === otherGame.rom!.name);
+                  if (exactMatch) {
                     hasAlternateRom = true;
+                  } else {
+                    // Try fuzzy match but keep the region in the comparison
+                    const fuzzyMatch = romFiles.find(rom => {
+                      // Normalize but DON'T strip region tags - we need to preserve them
+                      const romNormalized = normalizeForMatching(rom.name);
+                      const gameNormalized = normalizeForMatching(otherGame.rom!.name);
+                      return romNormalized === gameNormalized;
+                    });
+                    if (fuzzyMatch) {
+                      hasAlternateRom = true;
+                    }
                   }
                 }
-              }
-              
-              // Only add if not already in the list
-              if (!alternateRegions.some(ar => ar.region === otherGame.region)) {
-                alternateRegions.push({ 
-                  region: otherGame.region, 
-                  hasRom: hasAlternateRom 
-                });
+                
+                // Only add if not already in the list
+                if (!alternateRegions.some(ar => ar.region === otherGame.region)) {
+                  alternateRegions.push({ 
+                    region: otherGame.region, 
+                    hasRom: hasAlternateRom 
+                  });
+                }
               }
             }
+          });
+
+          results.push({
+            game: {
+              ...game,
+              description: game.description || game.name,
+            },
+            hasRom,
+            matchedRom,
+            matchMethod,
+            systemName: datFile.system,
+            alternateRegions: alternateRegions.length > 0 ? alternateRegions : undefined,
+          });
+
+          processedGames++;
+          
+          // Update progress periodically (every 100 games to avoid too many updates)
+          if (processedGames % 100 === 0) {
+            setMatchProgress({ current: processedGames, total: totalGames, system: datFile.system });
           }
         });
-
-        results.push({
-          game: {
-            ...game,
-            description: game.description || game.name,
-          },
-          hasRom,
-          matchedRom,
-          matchMethod,
-          systemName: datFile.system,
-          alternateRegions: alternateRegions.length > 0 ? alternateRegions : undefined,
-        });
-
-        // Update progress
-        processedGames++;
-        setMatchProgress({ current: processedGames, total: totalGames, system: datFile.system });
       });
-    });
 
-    // Matching complete
-    setIsMatching(false);
+      // Set final results
+      setComparisonResults(results);
+      setMatchProgress({ current: totalGames, total: totalGames, system: 'Complete' });
+      setMatchingState('complete');
+    }, 100);
+  };
 
-    return results;
-  }, [datFiles, romLists]); // Removed getBaseGameName from dependencies
+  // Compare ROMs with DAT files (now only used after matching is complete)
+  const comparison = comparisonResults;
 
   // Get unique systems for filter
   const systems = useMemo(() => {
@@ -417,8 +471,69 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     );
   }
 
+  // Show start button if no matching has been done yet
+  if (matchingState === 'idle') {
+    const totalDatGames = datFiles.reduce((sum, dat) => sum + dat.games.length, 0);
+    const totalRomCount = romLists.reduce((sum, list) => sum + list.roms.length, 0);
+    
+    return (
+      <Card className="p-12 text-center neon-card">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="flex justify-center mb-4">
+            <div className="rounded-full bg-primary/10 p-6" style={{
+              boxShadow: '0 0 30px var(--neon-cyan)'
+            }}>
+              <Gamepad2 className="size-16 stat-glow-cyan" />
+            </div>
+          </div>
+          
+          <h2 className="text-3xl font-bold uppercase stat-glow-pink">READY TO MATCH</h2>
+          
+          <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+            <Card className="p-4 neon-card">
+              <p className="text-sm text-muted-foreground uppercase">DAT Files</p>
+              <p className="text-2xl font-bold stat-glow-cyan">{datFiles.length}</p>
+              <p className="text-xs text-muted-foreground mt-1">{totalDatGames.toLocaleString()} games</p>
+            </Card>
+            <Card className="p-4 neon-card">
+              <p className="text-sm text-muted-foreground uppercase">ROM Lists</p>
+              <p className="text-2xl font-bold stat-glow-pink">{romLists.length}</p>
+              <p className="text-xs text-muted-foreground mt-1">{totalRomCount.toLocaleString()} ROMs</p>
+            </Card>
+          </div>
+
+          {romLists.length === 0 ? (
+            <div className="p-4 bg-yellow-500/10 border border-yellow-500 rounded-md">
+              <p className="text-sm text-yellow-400">⚠️ Upload ROM lists in the Setup tab before matching</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-muted-foreground">
+                Click below to start matching your ROMs against the DAT database.
+                <br />
+                This may take a few moments for large collections.
+              </p>
+              
+              <Button
+                onClick={startMatching}
+                size="lg"
+                className="neon-button text-lg px-8 py-6"
+                style={{
+                  boxShadow: '0 0 20px var(--neon-pink)',
+                }}
+              >
+                <Gamepad2 className="mr-2 h-6 w-6" />
+                START MATCHING
+              </Button>
+            </>
+          )}
+        </div>
+      </Card>
+    );
+  }
+
   // Show loading overlay while matching
-  if (isMatching) {
+  if (matchingState === 'matching') {
     return (
       <Card className="p-8 neon-card">
         <div className="space-y-4 text-center">
