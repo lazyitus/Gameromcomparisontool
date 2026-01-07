@@ -1,185 +1,77 @@
-// Sanitize region names to extract only country names - handles ANY country/region
+// Sanitize region names - extract ONLY the country/region name
 export const sanitizeRegion = (region: string | undefined): string | null => {
   if (!region) return null;
   
-  let cleaned = region.trim();
+  const original = region.trim().toLowerCase();
   
-  // Step 1: Remove all junk patterns (dates, versions, revisions, etc.)
-  const junkPatterns = [
-    /\b\d{6}\b/g,                    // Dates: "000412", "951005", "040202"
-    /\b\d{4}-\d{2}-\d{2}\b/g,        // ISO dates: "2001-01-15"
-    /\b\d+-\d+\b/g,                  // Part numbers: "315-5041", "315-5065"
-    /\bv\d+p?\b/gi,                  // Version codes: "V28P", "v2", "V119"
-    /\b\d+\/\d+\b/g,                 // Fractions: "3/6"
-    /\brev\s*\d+\b/gi,               // Revisions: "rev 2", "rev 6"
-    /\bversion\s*\d*\b/gi,           // Versions: "version", "version 2"
-    /\bset\s*\d+\b/gi,               // Sets: "set 1", "set 2"
-    /\bdisc\s*\d+\b/gi,              // Discs: "disc 1", "disc 2"
-    /\bdisk\s*\d+\b/gi,              // Disks: "disk 1", "disk 2"
-    /\bside\s*[ab]\b/gi,             // Sides: "side a", "side b"
-    /\b\d+\s*players?\b/gi,          // Player counts: "2 Players", "4 Players"
-    /\bcps\s*\d*\b/gi,               // CPS variants: "CPS1", "CPS2"
-    /\bcps\s*changer\b/gi,           // "CPS Changer"
-    /\bsample\s*version\b/gi,        // "SAMPLE Version"
-    /\bsample\b/gi,                  // "SAMPLE"
-    /\bbeta\b/gi,                    // "beta"
-    /\bdemo\b/gi,                    // "demo"
-    /\bproto(?:type)?\b/gi,          // "proto", "prototype"
-    /\bbootleg\b/gi,                 // "bootleg"
-    /\bhacked\??\b/gi,               // "hacked", "hacked?"
-    /\brallye\b/gi,                  // "Rallye"
-    /\bpublicity\b/gi,               // "Publicity"
-    /\bedition\b/gi,                 // "Phoenix Edition"
-    /\bphoenix\b/gi,                 // "Phoenix"
-    /\balt\b/gi,                     // "alt"
-    /\bmade\s+in\b/gi,               // "Made in"
-    /\btechausa\b/gi,                // Specific manufacturer
-    /\b\d+th\b/gi,                   // "11th"
-    /,/g,                            // Commas
-    /\?/g,                           // Question marks
+  // Country/region mapping - if ANY of these keywords appear, return the standard name
+  const countryMap: Array<{ keywords: RegExp[], name: string }> = [
+    { keywords: [/\busa?\b/, /\bunited\s+states\b/, /\bamerica\b/], name: 'USA' },
+    { keywords: [/\beurope?\b/, /\beu\b/, /\beur\b/], name: 'Europe' },
+    { keywords: [/\bjapan(ese)?\b/, /\bjpn?\b/], name: 'Japan' },
+    { keywords: [/\bworld\b/], name: 'World' },
+    { keywords: [/\basia(n)?\b/], name: 'Asia' },
+    { keywords: [/\bkorea(n)?\b/, /\bkr\b/], name: 'Korea' },
+    { keywords: [/\bchina\b/, /\bchinese\b/, /\bcn\b/], name: 'China' },
+    { keywords: [/\baustralia\b/, /\bau\b/], name: 'Australia' },
+    { keywords: [/\bbrazil\b/, /\bbr\b/], name: 'Brazil' },
+    { keywords: [/\bcanada\b/, /\bca\b/], name: 'Canada' },
+    { keywords: [/\bfrance\b/, /\bfrench\b/, /\bfr\b/], name: 'France' },
+    { keywords: [/\bgermany\b/, /\bgerman\b/, /\bde\b/], name: 'Germany' },
+    { keywords: [/\bitaly\b/, /\bitalian\b/, /\bit\b/], name: 'Italy' },
+    { keywords: [/\bspain\b/, /\bspanish\b/, /\bes\b/], name: 'Spain' },
+    { keywords: [/\buk\b/, /\bunited\s+kingdom\b/, /\bbritain\b/, /\bbritish\b/], name: 'UK' },
+    { keywords: [/\bgreece\b/, /\bgreek\b/, /\bgr\b/], name: 'Greece' },
+    { keywords: [/\bscandinavia\b/], name: 'Scandinavia' },
+    { keywords: [/\bnetherlands\b/, /\bholland\b/, /\bdutch\b/, /\bnl\b/], name: 'Netherlands' },
+    { keywords: [/\brussia\b/, /\brussian\b/, /\bru\b/], name: 'Russia' },
+    { keywords: [/\bmexico\b/, /\bmexican\b/, /\bmx\b/], name: 'Mexico' },
+    { keywords: [/\bargentina\b/, /\bar\b/], name: 'Argentina' },
+    { keywords: [/\bsweden\b/, /\bswedish\b/, /\bse\b/], name: 'Sweden' },
+    { keywords: [/\bnorway\b/, /\bnorwegian\b/, /\bno\b/], name: 'Norway' },
+    { keywords: [/\bdenmark\b/, /\bdanish\b/, /\bdk\b/], name: 'Denmark' },
+    { keywords: [/\bfinland\b/, /\bfinnish\b/, /\bfi\b/], name: 'Finland' },
+    { keywords: [/\bbelgium\b/, /\bbelgian\b/, /\bbe\b/], name: 'Belgium' },
+    { keywords: [/\bswitzerland\b/, /\bswiss\b/, /\bch\b/], name: 'Switzerland' },
+    { keywords: [/\baustria\b/, /\baustrian\b/, /\bat\b/], name: 'Austria' },
+    { keywords: [/\bpoland\b/, /\bpolish\b/, /\bpl\b/], name: 'Poland' },
+    { keywords: [/\bportugal\b/, /\bportuguese\b/, /\bpt\b/], name: 'Portugal' },
+    { keywords: [/\btaiwan\b/, /\btaiwanese\b/, /\btw\b/], name: 'Taiwan' },
+    { keywords: [/\bhong\s+kong\b/, /\bhk\b/], name: 'Hong Kong' },
+    { keywords: [/\bsingapore\b/, /\bsg\b/], name: 'Singapore' },
+    { keywords: [/\bthailand\b/, /\bthai\b/, /\bth\b/], name: 'Thailand' },
+    { keywords: [/\bindia\b/, /\bindian\b/, /\bin\b/], name: 'India' },
+    { keywords: [/\blatin\s+america\b/], name: 'Latin America' },
+    { keywords: [/\bsouth\s+america\b/], name: 'South America' },
+    { keywords: [/\bnew\s+zealand\b/, /\bnz\b/], name: 'New Zealand' },
+    { keywords: [/\bireland\b/, /\birish\b/, /\bie\b/], name: 'Ireland' },
+    { keywords: [/\bczech\b/], name: 'Czech Republic' },
+    { keywords: [/\bhungary\b/, /\bhungarian\b/, /\bhu\b/], name: 'Hungary' },
+    { keywords: [/\bromania\b/, /\bromanian\b/, /\bro\b/], name: 'Romania' },
+    { keywords: [/\bturkey\b/, /\bturkish\b/, /\btr\b/], name: 'Turkey' },
+    { keywords: [/\bsouth\s+africa\b/, /\bza\b/], name: 'South Africa' },
+    { keywords: [/\bisrael\b/, /\bisraeli\b/, /\bil\b/], name: 'Israel' },
+    { keywords: [/\bsaudi\s+arabia\b/, /\bsa\b/], name: 'Saudi Arabia' },
+    { keywords: [/\buae\b/, /\bunited\s+arab\s+emirates\b/], name: 'UAE' },
+    { keywords: [/\bindonesia\b/, /\bindonesian\b/, /\bid\b/], name: 'Indonesia' },
+    { keywords: [/\bmalaysia\b/, /\bmalaysian\b/, /\bmy\b/], name: 'Malaysia' },
+    { keywords: [/\bphilippines\b/, /\bfilipino\b/, /\bph\b/], name: 'Philippines' },
+    { keywords: [/\bvietnam\b/, /\bvietnamese\b/, /\bvn\b/], name: 'Vietnam' },
+    { keywords: [/\bchile\b/, /\bchilean\b/, /\bcl\b/], name: 'Chile' },
+    { keywords: [/\bcolombia\b/, /\bcolombian\b/, /\bco\b/], name: 'Colombia' },
+    { keywords: [/\bperu\b/, /\bperuvian\b/, /\bpe\b/], name: 'Peru' },
+    { keywords: [/\bvenezuela\b/, /\bvenezuelan\b/, /\bve\b/], name: 'Venezuela' },
   ];
   
-  // Remove all junk patterns
-  junkPatterns.forEach(pattern => {
-    cleaned = cleaned.replace(pattern, ' ');
-  });
-  
-  // Step 2: Clean up whitespace
-  cleaned = cleaned.replace(/\s+/g, ' ').trim();
-  
-  // Step 3: If nothing remains, filter it out
-  if (!cleaned || cleaned.length < 2) {
-    return null;
+  // Check each country map - return the FIRST match found
+  for (const country of countryMap) {
+    for (const regex of country.keywords) {
+      if (regex.test(original)) {
+        return country.name;
+      }
+    }
   }
   
-  // Step 4: Normalize common abbreviations to full names
-  const abbreviationMap: { [key: string]: string } = {
-    'usa': 'USA',
-    'us': 'USA',
-    'japan': 'Japan',
-    'jp': 'Japan',
-    'jpn': 'Japan',
-    'japanese': 'Japan',
-    'europe': 'Europe',
-    'eu': 'Europe',
-    'eur': 'Europe',
-    'world': 'World',
-    'asia': 'Asia',
-    'asian': 'Asia',
-    'korea': 'Korea',
-    'kr': 'Korea',
-    'korean': 'Korea',
-    'china': 'China',
-    'cn': 'China',
-    'australia': 'Australia',
-    'au': 'Australia',
-    'brazil': 'Brazil',
-    'br': 'Brazil',
-    'uk': 'UK',
-    'britain': 'UK',
-    'united kingdom': 'UK',
-    'canada': 'Canada',
-    'ca': 'Canada',
-    'france': 'France',
-    'fr': 'France',
-    'germany': 'Germany',
-    'de': 'Germany',
-    'italy': 'Italy',
-    'it': 'Italy',
-    'spain': 'Spain',
-    'es': 'Spain',
-    'mexico': 'Mexico',
-    'mx': 'Mexico',
-    'argentina': 'Argentina',
-    'ar': 'Argentina',
-    'sweden': 'Sweden',
-    'se': 'Sweden',
-    'norway': 'Norway',
-    'no': 'Norway',
-    'denmark': 'Denmark',
-    'dk': 'Denmark',
-    'finland': 'Finland',
-    'fi': 'Finland',
-    'netherlands': 'Netherlands',
-    'nl': 'Netherlands',
-    'holland': 'Netherlands',
-    'belgium': 'Belgium',
-    'be': 'Belgium',
-    'switzerland': 'Switzerland',
-    'ch': 'Switzerland',
-    'austria': 'Austria',
-    'at': 'Austria',
-    'poland': 'Poland',
-    'pl': 'Poland',
-    'russia': 'Russia',
-    'ru': 'Russia',
-    'greece': 'Greece',
-    'gr': 'Greece',
-    'greek': 'Greece',
-    'portugal': 'Portugal',
-    'pt': 'Portugal',
-    'taiwan': 'Taiwan',
-    'tw': 'Taiwan',
-    'hong kong': 'Hong Kong',
-    'hk': 'Hong Kong',
-    'singapore': 'Singapore',
-    'sg': 'Singapore',
-    'thailand': 'Thailand',
-    'th': 'Thailand',
-    'india': 'India',
-    'in': 'India',
-    'scandinavia': 'Scandinavia',
-    'latin america': 'Latin America',
-    'south america': 'South America',
-    'new zealand': 'New Zealand',
-    'nz': 'New Zealand',
-    'ireland': 'Ireland',
-    'ie': 'Ireland',
-    'czech': 'Czech Republic',
-    'hungary': 'Hungary',
-    'hu': 'Hungary',
-    'romania': 'Romania',
-    'ro': 'Romania',
-    'turkey': 'Turkey',
-    'tr': 'Turkey',
-    'south africa': 'South Africa',
-    'za': 'South Africa',
-    'israel': 'Israel',
-    'il': 'Israel',
-    'saudi arabia': 'Saudi Arabia',
-    'sa': 'Saudi Arabia',
-    'uae': 'UAE',
-    'united arab emirates': 'UAE',
-    'indonesia': 'Indonesia',
-    'id': 'Indonesia',
-    'malaysia': 'Malaysia',
-    'my': 'Malaysia',
-    'philippines': 'Philippines',
-    'ph': 'Philippines',
-    'vietnam': 'Vietnam',
-    'vn': 'Vietnam',
-    'chile': 'Chile',
-    'cl': 'Chile',
-    'colombia': 'Colombia',
-    'co': 'Colombia',
-    'peru': 'Peru',
-    'pe': 'Peru',
-    'venezuela': 'Venezuela',
-    've': 'Venezuela',
-  };
-  
-  // Check if the cleaned string matches any known abbreviation/name
-  const cleanedLower = cleaned.toLowerCase();
-  if (abbreviationMap[cleanedLower]) {
-    return abbreviationMap[cleanedLower];
-  }
-  
-  // Step 5: Capitalize properly (if not in map, it's a new region name)
-  // Split by spaces and capitalize each word
-  const capitalized = cleaned
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-  
-  return capitalized;
+  // If no country found, return null (filter it out)
+  return null;
 };
