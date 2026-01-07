@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import type { DatFile } from './DatFileUploader';
 import type { RomList } from './RomListUploader';
+import { sanitizeRegion } from './sanitizeRegion';
 
 interface RomFile {
   name: string;
@@ -89,68 +90,7 @@ const normalizeForMatching = (name: string): string => {
     .trim();
 };
 
-// Sanitize region names to extract only country names
-const sanitizeRegion = (region: string | undefined): string | null => {
-  if (!region) return null;
-  
-  const regionLower = region.toLowerCase().trim();
-  
-  // Filter out non-region data (player counts, disc info, etc.)
-  const nonRegionPatterns = [
-    /^\d+\s*players?$/i,
-    /^disc\s*\d+$/i,
-    /^disk\s*\d+$/i,
-    /^side\s*[ab]$/i,
-    /^rev\s*\d+$/i,
-    /^v\d+/i,
-    /^version/i,
-    /^beta/i,
-    /^demo/i,
-    /^proto/i,
-    /^sample/i,
-  ];
-  
-  if (nonRegionPatterns.some(pattern => pattern.test(regionLower))) {
-    return null;
-  }
-  
-  // Map of country keywords to standard names
-  // Order matters - check more specific patterns first
-  const countryMap: Array<{ keywords: string[], name: string }> = [
-    { keywords: ['usa', 'us', 'united states', 'america'], name: 'USA' },
-    { keywords: ['europe', 'eu', 'eur'], name: 'Europe' },
-    { keywords: ['japan', 'jp', 'jpn'], name: 'Japan' },
-    { keywords: ['world'], name: 'World' },
-    { keywords: ['asia'], name: 'Asia' },
-    { keywords: ['china', 'cn'], name: 'China' },
-    { keywords: ['korea', 'kr'], name: 'Korea' },
-    { keywords: ['australia', 'au'], name: 'Australia' },
-    { keywords: ['brazil', 'br'], name: 'Brazil' },
-    { keywords: ['canada', 'ca'], name: 'Canada' },
-    { keywords: ['france', 'fr'], name: 'France' },
-    { keywords: ['germany', 'de'], name: 'Germany' },
-    { keywords: ['italy', 'it'], name: 'Italy' },
-    { keywords: ['spain', 'es'], name: 'Spain' },
-    { keywords: ['uk', 'united kingdom', 'britain'], name: 'UK' },
-    { keywords: ['scandinavia'], name: 'Scandinavia' },
-    { keywords: ['netherlands', 'nl'], name: 'Netherlands' },
-    { keywords: ['russia', 'ru'], name: 'Russia' },
-  ];
-  
-  // Check if any country keyword appears in the region string
-  for (const country of countryMap) {
-    for (const keyword of country.keywords) {
-      // Use word boundaries to match whole words only
-      const regex = new RegExp(`\\b${keyword}\\b`, 'i');
-      if (regex.test(regionLower)) {
-        return country.name;
-      }
-    }
-  }
-  
-  // If nothing matches, return null (filter out this region)
-  return null;
-};
+// sanitizeRegion is now imported from ./sanitizeRegion.tsx
 
 // More aggressive matching that handles partial matches better
 const matchRomToGame = (romName: string, gameName: string): boolean => {
@@ -358,6 +298,66 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     const currentDatIds = datFiles.map(d => `${d.name}-${d.system}-${d.games.length}`);
     const currentRomIds = romLists.map(r => `${r.systemName}-${r.roms.length}`);
     
+    // Get current system names
+    const currentSystems = new Set(datFiles.map(d => d.system));
+    
+    // DELETION DETECTION: Check if any systems were removed
+    const previousSystems = new Set<string>();
+    processedDats.forEach((id: string) => {
+      const parts = id.split('-');
+      if (parts.length >= 2) {
+        // Extract system name (it's the second-to-last part before the game count)
+        const systemName = parts[parts.length - 2];
+        previousSystems.add(systemName);
+      }
+    });
+    
+    const deletedSystems = Array.from(previousSystems).filter(sys => !currentSystems.has(sys));
+    
+    // If systems were deleted, clean up comparison results
+    if (deletedSystems.length > 0 && comparisonResults.length > 0) {
+      const filteredResults = comparisonResults.filter(
+        result => !deletedSystems.includes(result.systemName)
+      );
+      setComparisonResults(filteredResults);
+      
+      // Clean up processed tracking
+      const updatedProcessedDats = processedDats.filter((id: string) => {
+        return !deletedSystems.some(sys => id.includes(`-${sys}-`));
+      });
+      localStorage.setItem('processedDats', JSON.stringify(updatedProcessedDats));
+      
+      const updatedProcessedRoms = processedRoms.filter((id: string) => {
+        return !deletedSystems.some(sys => id.startsWith(`${sys}-`));
+      });
+      localStorage.setItem('processedRomLists', JSON.stringify(updatedProcessedRoms));
+      
+      // Clean up systemsToMatch
+      const systemsToMatchJson = localStorage.getItem('systemsToMatch');
+      if (systemsToMatchJson) {
+        const systemsToMatch = JSON.parse(systemsToMatchJson);
+        const updatedSystemsToMatch = {
+          newDatSystems: systemsToMatch.newDatSystems.filter((s: string) => !deletedSystems.includes(s)),
+          changedRomSystems: systemsToMatch.changedRomSystems.filter((s: string) => !deletedSystems.includes(s))
+        };
+        
+        if (updatedSystemsToMatch.newDatSystems.length === 0 && updatedSystemsToMatch.changedRomSystems.length === 0) {
+          localStorage.removeItem('systemsToMatch');
+        } else {
+          localStorage.setItem('systemsToMatch', JSON.stringify(updatedSystemsToMatch));
+        }
+      }
+      
+      // If all systems were deleted, reset to idle
+      if (filteredResults.length === 0 && currentSystems.size === 0) {
+        setMatchingState('idle');
+        localStorage.removeItem('comparisonResults');
+        localStorage.removeItem('processedDats');
+        localStorage.removeItem('processedRomLists');
+        localStorage.removeItem('systemsToMatch');
+      }
+    }
+    
     // Find NEW DAT files (not in processed list)
     const newDats = datFiles.filter((d, i) => !processedDats.includes(currentDatIds[i]));
     
@@ -388,7 +388,7 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     romLists.forEach(r => {
       localStorage.setItem(`romList-${r.systemName}`, JSON.stringify({ roms: r.roms }));
     });
-  }, [datFiles, romLists, matchingState]);
+  }, [datFiles, romLists, matchingState, comparisonResults]);
 
   // Manual re-match function - clears all tracking and forces complete re-match
   const triggerManualRematch = () => {
