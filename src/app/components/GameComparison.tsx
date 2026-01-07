@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback, memo } from 'react';
 import { CheckCircle2, XCircle, Star, Search, Filter, Download, LayoutGrid, Table, Gamepad2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -193,11 +193,6 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
   
-  const [statusFilter, setStatusFilter] = useState<'all' | 'have' | 'missing' | 'missing-alt' | 'missing-all'>(() => {
-    const saved = localStorage.getItem('filterStatusFilter');
-    return (saved as 'all' | 'have' | 'missing' | 'missing-alt' | 'missing-all') || 'all';
-  });
-  
   const [categoryFilter, setCategoryFilter] = useState<string>(() => {
     return localStorage.getItem('filterCategoryFilter') || 'all';
   });
@@ -225,7 +220,10 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
 
   // Save all filter states to localStorage
   useEffect(() => {
-    localStorage.setItem('filterSearchQuery', searchQuery);
+    const timer = setTimeout(() => {
+      localStorage.setItem('filterSearchQuery', searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [searchQuery]);
 
   useEffect(() => {
@@ -235,10 +233,6 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
   useEffect(() => {
     localStorage.setItem('filterSelectedRegions', JSON.stringify(Array.from(selectedRegions)));
   }, [selectedRegions]);
-
-  useEffect(() => {
-    localStorage.setItem('filterStatusFilter', statusFilter);
-  }, [statusFilter]);
 
   useEffect(() => {
     localStorage.setItem('filterCategoryFilter', categoryFilter);
@@ -308,14 +302,20 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
       return !processedRoms.includes(currentId);
     }).map(r => r.systemName);
     
-    // If we have new DAT files or changed ROM lists, mark as needing matching
-    if (newDats.length > 0 || newOrChangedRomSystems.length > 0) {
-      setMatchingState('idle');
+    // Only mark as needing matching if:
+    // 1. We have new/changed data AND
+    // 2. We currently have matching results (don't reset if already idle)
+    if ((newDats.length > 0 || newOrChangedRomSystems.length > 0) && matchingState === 'complete') {
+      // Don't reset to idle - just store what needs matching
+      // The user can manually trigger re-match
       
       // Store which systems need re-matching
+      const existingSystemsToMatch = localStorage.getItem('systemsToMatch');
+      const existingSystems = existingSystemsToMatch ? JSON.parse(existingSystemsToMatch) : { newDatSystems: [], changedRomSystems: [] };
+      
       localStorage.setItem('systemsToMatch', JSON.stringify({
-        newDatSystems: newDats.map(d => d.system),
-        changedRomSystems: newOrChangedRomSystems
+        newDatSystems: [...new Set([...existingSystems.newDatSystems, ...newDats.map(d => d.system)])],
+        changedRomSystems: [...new Set([...existingSystems.changedRomSystems, ...newOrChangedRomSystems])]
       }));
     }
     
@@ -323,7 +323,7 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     romLists.forEach(r => {
       localStorage.setItem(`romList-${r.systemName}`, JSON.stringify({ roms: r.roms }));
     });
-  }, [datFiles, romLists]);
+  }, [datFiles, romLists, matchingState]);
 
   // Manual re-match function - clears all tracking and forces complete re-match
   const triggerManualRematch = () => {
@@ -343,7 +343,38 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     setMatchingState('idle');
   };
 
-  // Start matching process - INCREMENTAL VERSION
+  // Manual re-match for a specific system
+  const triggerSystemRematch = (systemName: string) => {
+    // Get current systems to match
+    const systemsToMatchJson = localStorage.getItem('systemsToMatch');
+    const existingSystems = systemsToMatchJson ? JSON.parse(systemsToMatchJson) : { newDatSystems: [], changedRomSystems: [] };
+    
+    // Add this system to the list of systems to match
+    localStorage.setItem('systemsToMatch', JSON.stringify({
+      newDatSystems: [...new Set([...existingSystems.newDatSystems, systemName])],
+      changedRomSystems: [...new Set([...existingSystems.changedRomSystems, systemName])]
+    }));
+
+    // Remove results for this system
+    const filteredResults = comparisonResults.filter(result => result.systemName !== systemName);
+    setComparisonResults(filteredResults);
+    
+    // Update processed tracking to exclude this system
+    const processedDatsJson = localStorage.getItem('processedDats');
+    const processedDats = processedDatsJson ? JSON.parse(processedDatsJson) : [];
+    const updatedProcessedDats = processedDats.filter((id: string) => !id.includes(`-${systemName}-`));
+    localStorage.setItem('processedDats', JSON.stringify(updatedProcessedDats));
+    
+    const processedRomsJson = localStorage.getItem('processedRomLists');
+    const processedRoms = processedRomsJson ? JSON.parse(processedRomsJson) : [];
+    const updatedProcessedRoms = processedRoms.filter((id: string) => !id.startsWith(`${systemName}-`));
+    localStorage.setItem('processedRomLists', JSON.stringify(updatedProcessedRoms));
+    
+    // Trigger re-match
+    setMatchingState('idle');
+  };
+
+  // Start matching process - INCREMENTAL VERSION with REAL-TIME PROGRESS
   const startMatching = async () => {
     setMatchingState('matching');
     
@@ -359,40 +390,43 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     // If no specific systems to match, match everything (first time)
     const isFirstTimeMatch = systemsNeedingMatch.size === 0;
     
-    // Use setTimeout to allow UI to update before heavy computation
-    setTimeout(() => {
-      const newResults: GameMatch[] = [];
-      let totalGames = 0;
-      let processedGames = 0;
+    const newResults: GameMatch[] = [];
+    let totalGames = 0;
+    let processedGames = 0;
 
-      // Calculate total games for progress (only for systems that need matching)
-      datFiles.forEach(datFile => {
-        if (isFirstTimeMatch || systemsNeedingMatch.has(datFile.system)) {
-          totalGames += datFile.games.length;
-        }
-      });
+    // Calculate total games for progress (only for systems that need matching)
+    datFiles.forEach(datFile => {
+      if (isFirstTimeMatch || systemsNeedingMatch.has(datFile.system)) {
+        totalGames += datFile.games.length;
+      }
+    });
 
-      setMatchProgress({ current: 0, total: totalGames, system: '' });
+    setMatchProgress({ current: 0, total: totalGames, system: '' });
 
-      // Get existing results to preserve
-      const existingResults = isFirstTimeMatch ? [] : comparisonResults.filter(
-        result => !systemsNeedingMatch.has(result.systemName)
-      );
+    // Get existing results to preserve
+    const existingResults = isFirstTimeMatch ? [] : comparisonResults.filter(
+      result => !systemsNeedingMatch.has(result.systemName)
+    );
 
-      // Process each system (only new/changed ones)
-      datFiles.forEach(datFile => {
-        // Skip systems that don't need matching
-        if (!isFirstTimeMatch && !systemsNeedingMatch.has(datFile.system)) {
-          return;
-        }
+    // Process each system ONE AT A TIME with delays to allow UI updates
+    for (const datFile of datFiles) {
+      // Skip systems that don't need matching
+      if (!isFirstTimeMatch && !systemsNeedingMatch.has(datFile.system)) {
+        continue;
+      }
+      
+      // Find the ROM list for this system
+      const romList = romLists.find(list => list.systemName === datFile.system);
+      const romFiles = romList ? romList.roms : [];
+
+      setMatchProgress({ current: processedGames, total: totalGames, system: datFile.system });
+
+      // Process games in batches of 50 to allow UI updates
+      const batchSize = 50;
+      for (let i = 0; i < datFile.games.length; i += batchSize) {
+        const batch = datFile.games.slice(i, Math.min(i + batchSize, datFile.games.length));
         
-        // Find the ROM list for this system
-        const romList = romLists.find(list => list.systemName === datFile.system);
-        const romFiles = romList ? romList.roms : [];
-
-        setMatchProgress({ current: processedGames, total: totalGames, system: datFile.system });
-
-        datFile.games.forEach(game => {
+        batch.forEach(game => {
           let hasRom = false;
           let matchedRom: RomFile | undefined;
           let matchMethod: 'filename' | 'exact' | undefined;
@@ -475,28 +509,29 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
           });
 
           processedGames++;
-          
-          // Update progress periodically (every 100 games to avoid too many updates)
-          if (processedGames % 100 === 0) {
-            setMatchProgress({ current: processedGames, total: totalGames, system: datFile.system });
-          }
         });
-      });
 
-      // Set final results
-      setComparisonResults([...existingResults, ...newResults]);
-      setMatchProgress({ current: totalGames, total: totalGames, system: 'Complete' });
-      setMatchingState('complete');
-      
-      // Save which DAT files and ROM lists we've processed
-      const currentDatIds = datFiles.map(d => `${d.system}-${d.games.length}`);
-      const currentRomIds = romLists.map(r => r.systemName);
-      localStorage.setItem('processedDats', JSON.stringify(currentDatIds));
-      localStorage.setItem('processedRomLists', JSON.stringify(currentRomIds));
-      
-      // Clear the systems to match list
-      localStorage.removeItem('systemsToMatch');
-    }, 100);
+        // Update progress after each batch
+        setMatchProgress({ current: processedGames, total: totalGames, system: datFile.system });
+        
+        // Yield to browser to allow UI update (small delay)
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    }
+
+    // Set final results
+    setComparisonResults([...existingResults, ...newResults]);
+    setMatchProgress({ current: totalGames, total: totalGames, system: 'Complete' });
+    setMatchingState('complete');
+    
+    // Save which DAT files and ROM lists we've processed
+    const currentDatIds = datFiles.map(d => `${d.name}-${d.system}-${d.games.length}`);
+    const currentRomIds = romLists.map(r => `${r.systemName}-${r.roms.length}`);
+    localStorage.setItem('processedDats', JSON.stringify(currentDatIds));
+    localStorage.setItem('processedRomLists', JSON.stringify(currentRomIds));
+    
+    // Clear the systems to match list
+    localStorage.removeItem('systemsToMatch');
   };
 
   // Compare ROMs with DAT files (now only used after matching is complete)
@@ -554,14 +589,6 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
         if (!selectedRegions.has(match.game.region || '')) return false;
       }
 
-      // Status filter
-      if (statusFilter === 'have' && !match.hasRom) return false;
-      if (statusFilter === 'missing' && match.hasRom) return false;
-      if (statusFilter === 'missing-alt' && match.hasRom) return false;
-      if (statusFilter === 'missing-alt' && match.alternateRegions?.every(ar => ar.hasRom)) return false;
-      if (statusFilter === 'missing-all' && match.hasRom) return false;
-      if (statusFilter === 'missing-all' && match.alternateRegions?.some(ar => ar.hasRom)) return false;
-
       // Category filter
       if (categoryFilter !== 'all') {
         if (match.game.category !== categoryFilter) return false;
@@ -583,7 +610,7 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
 
       return true;
     });
-  }, [comparison, selectedSystem, searchQuery, selectedRegions, statusFilter, categoryFilter, releaseTypeFilter, revisionFilter]);
+  }, [comparison, selectedSystem, searchQuery, selectedRegions, categoryFilter, releaseTypeFilter, revisionFilter]);
 
   const stats = useMemo(() => {
     // Calculate stats based on FILTERED results, not all games
@@ -749,20 +776,32 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
       </div>
 
       {/* Re-Match Button */}
-      <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={triggerManualRematch}
-          className="flex items-center gap-1 h-7 px-3 text-xs"
-          style={{
-            borderColor: 'var(--neon-orange)',
-            color: 'var(--neon-orange)'
+      <div className="flex justify-end gap-2">
+        <Select
+          value="select"
+          onValueChange={(value) => {
+            if (value === 'all') {
+              triggerManualRematch();
+            } else {
+              triggerSystemRematch(value);
+            }
           }}
         >
-          <Gamepad2 className="size-3" />
-          Re-Match All
-        </Button>
+          <SelectTrigger className="h-7 w-[180px] text-xs" style={{
+            borderColor: 'var(--neon-orange)',
+            color: 'var(--neon-orange)'
+          }}>
+            <Gamepad2 className="size-3 mr-1" />
+            <SelectValue placeholder="Re-Match..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Re-Match All Systems</SelectItem>
+            {systems.length > 0 && <div className="h-px bg-border my-1" />}
+            {systems.map(system => (
+              <SelectItem key={system} value={system}>Re-Match {system}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Filters */}
@@ -845,18 +884,19 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
                 </PopoverContent>
               </Popover>
 
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="have">Have ROM</SelectItem>
-                  <SelectItem value="missing">Missing ROM</SelectItem>
-                  <SelectItem value="missing-alt">Missing (have in alt region)</SelectItem>
-                  <SelectItem value="missing-all">Missing (all regions)</SelectItem>
-                </SelectContent>
-              </Select>
+              {categories.length > 0 && (
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="grid gap-2 md:grid-cols-2 mt-2">
@@ -881,22 +921,6 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
                   <SelectItem value="revisions">Revisions Only</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="grid gap-2 md:grid-cols-1 mt-2">
-              {categories.length > 0 && (
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="All Categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {categories.map(category => (
-                      <SelectItem key={category} value={category}>{category}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
             </div>
           </>
         )}
@@ -987,16 +1011,21 @@ function GameList({ games, viewMode, regions, onAddToWantList, wantedGameIds }: 
     return <GameTable games={games} regions={regions} />;
   }
 
-  // Card view (default)
+  // Card view (default) - Limit to 200 items for performance
+  const renderLimit = 200;
+  const visibleGames = games.slice(0, renderLimit);
+  const hasMore = games.length > renderLimit;
+  
   return (
-    <div className="space-y-1 max-h-[600px] overflow-y-auto">
-      {games.map((match, index) => (
-        <Card key={index} className={`p-2 ${match.hasRom ? 'neon-card' : ''}`} style={
-          match.hasRom ? {
-            borderColor: 'var(--neon-green)',
-            boxShadow: '0 0 8px var(--neon-green)'
-          } : undefined
-        }>
+    <>
+      <div className="space-y-1 max-h-[600px] overflow-y-auto">
+        {visibleGames.map((match, index) => (
+          <Card key={`${match.systemName}-${match.game.name}-${index}`} className={`p-2 ${match.hasRom ? 'neon-card' : ''}`} style={
+            match.hasRom ? {
+              borderColor: 'var(--neon-green)',
+              boxShadow: '0 0 8px var(--neon-green)'
+            } : undefined
+          }>
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
@@ -1094,7 +1123,13 @@ function GameList({ games, viewMode, regions, onAddToWantList, wantedGameIds }: 
           </div>
         </Card>
       ))}
-    </div>
+      </div>
+      {hasMore && (
+        <Card className="p-3 text-center bg-yellow-500/10 border-yellow-500 mt-2">
+          <p className="text-xs text-yellow-400">📊 Showing first {renderLimit} of {games.length} games for performance. Use filters to narrow results.</p>
+        </Card>
+      )}
+    </>
   );
 }
 
