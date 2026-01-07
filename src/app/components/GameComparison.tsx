@@ -1237,7 +1237,7 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
 
       {/* Results */}
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-9">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="all" className="text-xs">All Games</TabsTrigger>
           <TabsTrigger value="have" className="text-xs">Have ({stats.have})</TabsTrigger>
           <TabsTrigger value="missing" className="text-xs">Missing ({stats.missing})</TabsTrigger>

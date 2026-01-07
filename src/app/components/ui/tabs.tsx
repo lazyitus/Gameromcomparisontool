@@ -46,7 +46,7 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "inline-flex h-auto flex-1 items-center justify-center gap-2 px-6 py-3 text-sm font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 border-2 border-transparent",
+        "inline-flex h-8 flex-1 items-center justify-center gap-2 px-4 py-0 text-sm font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 border-2 border-transparent",
         "data-[state=active]:border-2 opacity-70 hover:opacity-100",
         "data-[state=active]:opacity-100",
         className,
