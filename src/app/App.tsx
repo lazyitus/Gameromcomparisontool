@@ -221,6 +221,10 @@ export default function App() {
                       <div className="flex gap-3">
                         <Button
                           onClick={() => {
+                            console.log('🚀 MATCH NEW BUTTON CLICKED');
+                            console.log('📊 Current systemsToMatch:', localStorage.getItem('systemsToMatch'));
+                            console.log('📊 Current processedDats:', localStorage.getItem('processedDats'));
+                            console.log('📊 Current processedRomLists:', localStorage.getItem('processedRomLists'));
                             setTriggerMatching('new');
                             setActiveTab('collection');
                           }}
@@ -236,6 +240,7 @@ export default function App() {
                         
                         <Button
                           onClick={() => {
+                            console.log('🔥 RE-MATCH ALL BUTTON CLICKED');
                             setTriggerMatching('all');
                             setActiveTab('collection');
                           }}

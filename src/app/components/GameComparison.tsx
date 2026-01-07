@@ -338,6 +338,8 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
 
   // Smart incremental matching - only process NEW DAT files and ROM lists
   useEffect(() => {
+    console.log('🔍 DETECTION EFFECT RUNNING');
+    
     // Get previously processed data
     const processedDatsJson = localStorage.getItem('processedDats');
     const processedDats = processedDatsJson ? JSON.parse(processedDatsJson) : [];
@@ -345,9 +347,15 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     const processedRomsJson = localStorage.getItem('processedRomLists');
     const processedRoms = processedRomsJson ? JSON.parse(processedRomsJson) : [];
     
+    console.log('📦 processedDats:', processedDats);
+    console.log('📦 processedRoms:', processedRoms);
+    
     // Create BETTER identifiers for current data using filename + system + game count
     const currentDatIds = datFiles.map(d => `${d.name}-${d.system}-${d.games.length}`);
     const currentRomIds = romLists.map(r => `${r.systemName}-${r.roms.length}`);
+    
+    console.log('📋 currentDatIds:', currentDatIds);
+    console.log('📋 currentRomIds:', currentRomIds);
     
     // Get current system names
     const currentSystems = new Set(datFiles.map(d => d.system));
@@ -412,11 +420,15 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     // Find NEW DAT files (not in processed list)
     const newDats = datFiles.filter((d, i) => !processedDats.includes(currentDatIds[i]));
     
+    console.log('🆕 newDats:', newDats.map(d => d.system));
+    
     // Find ROM lists for systems that weren't processed before OR that have changed
     const newOrChangedRomSystems = romLists.filter(r => {
       const currentId = `${r.systemName}-${r.roms.length}`;
       return !processedRoms.includes(currentId);
     }).map(r => r.systemName);
+    
+    console.log('🔄 newOrChangedRomSystems:', newOrChangedRomSystems);
     
     // ALWAYS track new/changed systems, regardless of matchingState
     if (newDats.length > 0 || newOrChangedRomSystems.length > 0) {
@@ -424,10 +436,14 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
       const existingSystemsToMatch = localStorage.getItem('systemsToMatch');
       const existingSystems = existingSystemsToMatch ? JSON.parse(existingSystemsToMatch) : { newDatSystems: [], changedRomSystems: [] };
       
-      localStorage.setItem('systemsToMatch', JSON.stringify({
+      const updatedSystemsToMatch = {
         newDatSystems: [...new Set([...existingSystems.newDatSystems, ...newDats.map(d => d.system)])],
         changedRomSystems: [...new Set([...existingSystems.changedRomSystems, ...newOrChangedRomSystems])]
-      }));
+      };
+      
+      console.log('💾 Setting systemsToMatch to:', updatedSystemsToMatch);
+      
+      localStorage.setItem('systemsToMatch', JSON.stringify(updatedSystemsToMatch));
     }
     
     // Store current ROM lists for change detection (no longer needed, but keep for backward compat)
@@ -770,13 +786,19 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     const systemsToMatchJson = localStorage.getItem('systemsToMatch');
     const systemsToMatch = systemsToMatchJson ? JSON.parse(systemsToMatchJson) : { newDatSystems: [], changedRomSystems: [] };
     
+    console.log('🎯 IDLE SCREEN - systemsToMatch:', systemsToMatch);
+    
     const systemsNeedingMatch = [...new Set([
       ...systemsToMatch.newDatSystems,
       ...systemsToMatch.changedRomSystems
     ])];
     
+    console.log('🎯 IDLE SCREEN - systemsNeedingMatch:', systemsNeedingMatch);
+    
     // If there are specific systems to match, show only those
     const isFirstTimeMatch = systemsNeedingMatch.length === 0;
+    
+    console.log('🎯 IDLE SCREEN - isFirstTimeMatch:', isFirstTimeMatch);
     
     // Calculate counts for NEW systems only (or all if first time)
     let newSystemCount = 0;
