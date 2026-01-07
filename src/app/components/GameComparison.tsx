@@ -303,6 +303,39 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     setTriggerMatching(null);
   }, [triggerMatching, setTriggerMatching]);
 
+  // Initialize processed tracking from existing results on first load
+  useEffect(() => {
+    // Only run once on mount
+    const hasInitialized = localStorage.getItem('processedTrackingInitialized');
+    if (hasInitialized) return;
+    
+    // If we have comparison results but no processed tracking, initialize it
+    if (comparisonResults.length > 0) {
+      const existingSystemsInResults = new Set(comparisonResults.map(r => r.systemName));
+      
+      // Initialize processedDats for systems we have results for
+      const initialProcessedDats = datFiles
+        .filter(d => existingSystemsInResults.has(d.system))
+        .map(d => `${d.name}-${d.system}-${d.games.length}`);
+      
+      if (initialProcessedDats.length > 0) {
+        localStorage.setItem('processedDats', JSON.stringify(initialProcessedDats));
+      }
+      
+      // Initialize processedRomLists for systems we have results for  
+      const initialProcessedRoms = romLists
+        .filter(r => existingSystemsInResults.has(r.systemName))
+        .map(r => `${r.systemName}-${r.roms.length}`);
+      
+      if (initialProcessedRoms.length > 0) {
+        localStorage.setItem('processedRomLists', JSON.stringify(initialProcessedRoms));
+      }
+    }
+    
+    // Mark as initialized
+    localStorage.setItem('processedTrackingInitialized', 'true');
+  }, []); // Only run once on mount
+
   // Smart incremental matching - only process NEW DAT files and ROM lists
   useEffect(() => {
     // Get previously processed data
@@ -385,14 +418,9 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
       return !processedRoms.includes(currentId);
     }).map(r => r.systemName);
     
-    // Only mark as needing matching if:
-    // 1. We have new/changed data AND
-    // 2. We currently have matching results (don't reset if already idle)
-    if ((newDats.length > 0 || newOrChangedRomSystems.length > 0) && matchingState === 'complete') {
-      // Don't reset to idle - just store what needs matching
-      // The user can manually trigger re-match
-      
-      // Store which systems need re-matching
+    // ALWAYS track new/changed systems, regardless of matchingState
+    if (newDats.length > 0 || newOrChangedRomSystems.length > 0) {
+      // Store which systems need matching
       const existingSystemsToMatch = localStorage.getItem('systemsToMatch');
       const existingSystems = existingSystemsToMatch ? JSON.parse(existingSystemsToMatch) : { newDatSystems: [], changedRomSystems: [] };
       
@@ -415,6 +443,7 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     localStorage.removeItem('processedRomLists');
     localStorage.removeItem('systemsToMatch');
     localStorage.removeItem('comparisonResults');
+    localStorage.removeItem('processedTrackingInitialized');
     
     // Clear ROM list cache
     romLists.forEach(r => {
