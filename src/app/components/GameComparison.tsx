@@ -44,6 +44,8 @@ interface GameComparisonProps {
     romName?: string;
   }) => void;
   wantedGameIds?: Set<string>;
+  triggerMatching?: 'new' | 'all' | null;
+  setTriggerMatching?: (value: 'new' | 'all' | null) => void;
 }
 
 // Move helper functions OUTSIDE component to prevent recreation
@@ -181,7 +183,7 @@ const hasRevisionTag = (name: string): boolean => {
          /\(version\s*\d+\)/i.test(lowerName);
 };
 
-export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGameIds }: GameComparisonProps) {
+export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGameIds, triggerMatching, setTriggerMatching }: GameComparisonProps) {
   // Filter states with localStorage persistence
   const [searchQuery, setSearchQuery] = useState<string>(() => {
     return localStorage.getItem('filterSearchQuery') || '';
@@ -284,6 +286,22 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
       localStorage.setItem('comparisonResults', JSON.stringify(comparisonResults));
     }
   }, [comparisonResults]);
+
+  // Handle matching triggers from Setup tab
+  useEffect(() => {
+    if (!triggerMatching || !setTriggerMatching) return;
+    
+    if (triggerMatching === 'all') {
+      // Re-match all: Clear everything and start fresh
+      triggerManualRematch();
+    } else if (triggerMatching === 'new') {
+      // Match new: Just trigger matching with current settings (will match what's in systemsToMatch)
+      setMatchingState('idle');
+    }
+    
+    // Clear the trigger
+    setTriggerMatching(null);
+  }, [triggerMatching, setTriggerMatching]);
 
   // Smart incremental matching - only process NEW DAT files and ROM lists
   useEffect(() => {

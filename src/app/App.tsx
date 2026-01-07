@@ -8,6 +8,7 @@ import { TitleBar } from './components/TitleBar';
 import { Card } from './components/ui/card';
 import { Separator } from './components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
+import { Button } from './components/ui/button';
 
 export default function App() {
   // Debug: Check if Electron API is available
@@ -30,6 +31,9 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState('collection');
+  
+  // Trigger matching flag - set to 'new', 'all', or null
+  const [triggerMatching, setTriggerMatching] = useState<'new' | 'all' | null>(null);
   
   // Want list state with localStorage persistence
   const [wantedGames, setWantedGames] = useState<WantedGame[]>(() => {
@@ -137,7 +141,7 @@ export default function App() {
         </div>
 
         {/* Tab Navigation */}
-        <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3 mb-6">
             {tabs.map(tab => (
               <TabsTrigger 
@@ -158,6 +162,8 @@ export default function App() {
               romLists={romLists}
               onAddToWantList={addToWantList}
               wantedGameIds={wantedGameIds}
+              triggerMatching={triggerMatching}
+              setTriggerMatching={setTriggerMatching}
             />
           </TabsContent>
 
@@ -197,6 +203,63 @@ export default function App() {
                     datFiles={datFiles}
                   />
                 </div>
+
+                {/* Matching Buttons */}
+                {datFiles.length > 0 && romLists.length > 0 && (
+                  <>
+                    <Separator style={{ 
+                      backgroundColor: 'var(--neon-purple)',
+                      boxShadow: '0 0 5px var(--neon-purple)'
+                    }} />
+                    
+                    <div>
+                      <h3 className="font-medium mb-3 text-lg">▶ 3. START MATCHING</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Match your ROM files against the DAT database to see what you have and what's missing.
+                      </p>
+                      
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={() => {
+                            setTriggerMatching('new');
+                            setActiveTab('collection');
+                          }}
+                          className="neon-button flex-1"
+                          size="lg"
+                          style={{
+                            boxShadow: '0 0 15px var(--neon-cyan)',
+                          }}
+                        >
+                          <Gamepad2 className="mr-2 h-5 w-5" />
+                          MATCH NEW SYSTEMS
+                        </Button>
+                        
+                        <Button
+                          onClick={() => {
+                            setTriggerMatching('all');
+                            setActiveTab('collection');
+                          }}
+                          variant="outline"
+                          className="flex-1"
+                          size="lg"
+                          style={{
+                            borderColor: 'var(--neon-pink)',
+                            boxShadow: '0 0 10px var(--neon-pink)',
+                          }}
+                        >
+                          <Gamepad2 className="mr-2 h-5 w-5" />
+                          RE-MATCH ALL
+                        </Button>
+                      </div>
+                      
+                      <p className="text-xs text-muted-foreground mt-2">
+                        💡 <strong>Match New:</strong> Only matches systems you just added
+                        <br />
+                        💡 <strong>Re-Match All:</strong> Re-processes everything from scratch
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </Card>
           </TabsContent>
