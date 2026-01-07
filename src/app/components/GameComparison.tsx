@@ -386,19 +386,20 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
           let matchedRom: RomFile | undefined;
           let matchMethod: 'filename' | 'exact' | undefined;
 
-          // Try to match by filename (only against ROMs for this system)
-          // Use game.rom.name if available, otherwise fall back to game.name
-          const romNameToMatch = game.rom?.name || game.name;
+          // Match using the GAME NAME attribute, not individual ROM chip names
+          // For arcade/MAME DATs: <game name="88games"> should match "88games.zip"
+          // For console DATs: <game name="Super Mario Bros"> should match the game name
+          const gameNameToMatch = game.name;
           
-          if (romNameToMatch) {
-            const exactMatch = romFiles.find(rom => rom.name === romNameToMatch);
+          if (gameNameToMatch) {
+            const exactMatch = romFiles.find(rom => rom.name === gameNameToMatch);
             if (exactMatch) {
               hasRom = true;
               matchedRom = exactMatch;
               matchMethod = 'exact';
             } else {
               // Try improved fuzzy matching with the new algorithm
-              const fuzzyMatch = romFiles.find(rom => matchRomToGame(rom.name, romNameToMatch));
+              const fuzzyMatch = romFiles.find(rom => matchRomToGame(rom.name, gameNameToMatch));
               if (fuzzyMatch) {
                 hasRom = true;
                 matchedRom = fuzzyMatch;
