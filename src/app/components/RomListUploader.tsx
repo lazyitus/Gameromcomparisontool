@@ -548,7 +548,10 @@ export function RomListUploader({ onRomsLoaded, romLists, datFiles }: RomListUpl
     }
 
     if (newLists.length > 0) {
-      onRomsLoaded([...romLists, ...newLists]);
+      // Append to existing ROM lists, avoiding duplicates
+      const existingKeys = new Set(romLists.map(list => `${list.systemName}-${list.name}`));
+      const uniqueNewLists = newLists.filter(list => !existingKeys.has(`${list.systemName}-${list.name}`));
+      onRomsLoaded([...romLists, ...uniqueNewLists]);
       setPendingAssignments([]);
     }
   };

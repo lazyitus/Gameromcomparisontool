@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { CheckCircle2, XCircle, Star, Search, Filter, Download, LayoutGrid, Table, Gamepad2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Star, Search, Filter, Download, LayoutGrid, Table, Gamepad2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -187,6 +187,17 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
   const [releaseTypeFilter, setReleaseTypeFilter] = useState<'all' | 'official' | 'unofficial'>('all');
   const [revisionFilter, setRevisionFilter] = useState<'all' | 'base' | 'revisions'>('all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  
+  // Show/hide filters with localStorage persistence
+  const [showFilters, setShowFilters] = useState<boolean>(() => {
+    const saved = localStorage.getItem('showFilters');
+    return saved ? JSON.parse(saved) : true; // Default to visible
+  });
+
+  // Save filter visibility to localStorage
+  useEffect(() => {
+    localStorage.setItem('showFilters', JSON.stringify(showFilters));
+  }, [showFilters]);
   
   // Persist matching state and results
   const [matchingState, setMatchingState] = useState<'idle' | 'matching' | 'complete'>(() => {
@@ -571,144 +582,174 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4 neon-card">
-          <p className="text-sm text-muted-foreground uppercase tracking-wide">Total Games</p>
-          <p className="text-3xl font-bold stat-glow-cyan">{stats.total}</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="p-3 neon-card">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Games</p>
+          <p className="text-2xl font-bold stat-glow-cyan">{stats.total}</p>
         </Card>
-        <Card className="p-4 neon-card" style={{
+        <Card className="p-3 neon-card" style={{
           borderColor: 'var(--neon-green)',
           boxShadow: '0 0 10px var(--neon-green)'
         }}>
-          <p className="text-sm text-muted-foreground uppercase tracking-wide">Have</p>
-          <p className="text-3xl font-bold stat-glow-green">{stats.have}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Have</p>
+          <p className="text-2xl font-bold stat-glow-green">{stats.have}</p>
         </Card>
-        <Card className="p-4 neon-card" style={{
+        <Card className="p-3 neon-card" style={{
           borderColor: '#ff0055',
           boxShadow: '0 0 10px #ff0055'
         }}>
-          <p className="text-sm text-muted-foreground uppercase tracking-wide">Missing</p>
-          <p className="text-3xl font-bold stat-glow-red">{stats.missing}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Missing</p>
+          <p className="text-2xl font-bold stat-glow-red">{stats.missing}</p>
         </Card>
-        <Card className="p-4 neon-card" style={{
+        <Card className="p-3 neon-card" style={{
           borderColor: 'var(--neon-pink)',
           boxShadow: '0 0 10px var(--neon-pink)'
         }}>
-          <p className="text-sm text-muted-foreground uppercase tracking-wide">Collection</p>
-          <p className="text-3xl font-bold stat-glow-pink">{stats.percentage}%</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Collection</p>
+          <p className="text-2xl font-bold stat-glow-pink">{stats.percentage}%</p>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          <div className="relative lg:col-span-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              placeholder="Search games..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          <Select value={selectedSystem} onValueChange={setSelectedSystem}>
-            <SelectTrigger>
-              <SelectValue placeholder="All Systems" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Systems</SelectItem>
-              {systems.map(system => (
-                <SelectItem key={system} value={system}>{system}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Popover>
-            <PopoverTrigger className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all h-8 px-3 border bg-background text-foreground hover:bg-accent hover:text-accent-foreground">
-              <Filter className="size-4" />
-              {selectedRegions.size > 0 ? `Regions (${selectedRegions.size})` : 'All Regions'}
-            </PopoverTrigger>
-            <PopoverContent className="p-4 space-y-2 max-h-60 overflow-y-auto">
-              {regions.map(region => (
-                <div key={region} className="flex items-center">
-                  <Checkbox
-                    id={region}
-                    checked={selectedRegions.has(region)}
-                    onCheckedChange={(checked) => {
-                      const newRegions = new Set(selectedRegions);
-                      if (checked) {
-                        newRegions.add(region);
-                      } else {
-                        newRegions.delete(region);
-                      }
-                      setSelectedRegions(newRegions);
-                    }}
-                  />
-                  <Label className="ml-2" htmlFor={region}>{region}</Label>
-                </div>
-              ))}
-            </PopoverContent>
-          </Popover>
-
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-            <SelectTrigger>
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="have">Have ROM</SelectItem>
-              <SelectItem value="missing">Missing ROM</SelectItem>
-              <SelectItem value="missing-alt">Missing (have in alt region)</SelectItem>
-              <SelectItem value="missing-all">Missing (all regions)</SelectItem>
-            </SelectContent>
-          </Select>
+      <Card className="p-3">
+        {/* Toggle Button */}
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-medium uppercase tracking-wide stat-glow-cyan flex items-center gap-2">
+            <Filter className="size-3" />
+            Filters
+          </h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-1 h-7 text-xs"
+          >
+            {showFilters ? (
+              <>
+                <ChevronUp className="size-3" />
+                Hide
+              </>
+            ) : (
+              <>
+                <ChevronDown className="size-3" />
+                Show
+              </>
+            )}
+          </Button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 mt-4">
-          <Select value={releaseTypeFilter} onValueChange={(v) => setReleaseTypeFilter(v as any)}>
-            <SelectTrigger>
-              <SelectValue placeholder="All Releases" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Releases</SelectItem>
-              <SelectItem value="official">Official Releases Only</SelectItem>
-              <SelectItem value="unofficial">Proto/Demo/Pirate Only</SelectItem>
-            </SelectContent>
-          </Select>
+        {showFilters && (
+          <>
+            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-5">
+              <div className="relative lg:col-span-2">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
+                <Input
+                  placeholder="Search games..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-7 h-8 text-sm"
+                />
+              </div>
+              
+              <Select value={selectedSystem} onValueChange={setSelectedSystem}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="All Systems" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Systems</SelectItem>
+                  {systems.map(system => (
+                    <SelectItem key={system} value={system}>{system}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-          <Select value={revisionFilter} onValueChange={(v) => setRevisionFilter(v as any)}>
-            <SelectTrigger>
-              <SelectValue placeholder="All Versions" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Versions</SelectItem>
-              <SelectItem value="base">Base Versions Only</SelectItem>
-              <SelectItem value="revisions">Revisions Only</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+              <Popover>
+                <PopoverTrigger className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium transition-all h-8 px-2 border bg-background text-foreground hover:bg-accent hover:text-accent-foreground">
+                  <Filter className="size-3" />
+                  {selectedRegions.size > 0 ? `Regions (${selectedRegions.size})` : 'All Regions'}
+                </PopoverTrigger>
+                <PopoverContent className="p-3 space-y-1 max-h-60 overflow-y-auto">
+                  {regions.map(region => (
+                    <div key={region} className="flex items-center">
+                      <Checkbox
+                        id={region}
+                        checked={selectedRegions.has(region)}
+                        onCheckedChange={(checked) => {
+                          const newRegions = new Set(selectedRegions);
+                          if (checked) {
+                            newRegions.add(region);
+                          } else {
+                            newRegions.delete(region);
+                          }
+                          setSelectedRegions(newRegions);
+                        }}
+                      />
+                      <Label className="ml-2 text-xs" htmlFor={region}>{region}</Label>
+                    </div>
+                  ))}
+                </PopoverContent>
+              </Popover>
 
-        <div className="grid gap-4 md:grid-cols-1 mt-4">
-          {categories.length > 0 && (
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(category => (
-                  <SelectItem key={category} value={category}>{category}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="have">Have ROM</SelectItem>
+                  <SelectItem value="missing">Missing ROM</SelectItem>
+                  <SelectItem value="missing-alt">Missing (have in alt region)</SelectItem>
+                  <SelectItem value="missing-all">Missing (all regions)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="flex items-center justify-between mt-4 pt-4 border-t">
-          <p className="text-sm text-muted-foreground">
+            <div className="grid gap-2 md:grid-cols-2 mt-2">
+              <Select value={releaseTypeFilter} onValueChange={(v) => setReleaseTypeFilter(v as any)}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="All Releases" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Releases</SelectItem>
+                  <SelectItem value="official">Official Releases Only</SelectItem>
+                  <SelectItem value="unofficial">Proto/Demo/Pirate Only</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={revisionFilter} onValueChange={(v) => setRevisionFilter(v as any)}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="All Versions" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Versions</SelectItem>
+                  <SelectItem value="base">Base Versions Only</SelectItem>
+                  <SelectItem value="revisions">Revisions Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-1 mt-2">
+              {categories.length > 0 && (
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </>
+        )}
+
+        <div className={`flex items-center justify-between ${showFilters ? 'mt-3 pt-3 border-t' : ''}`}>
+          <p className="text-xs text-muted-foreground">
             Showing {filteredResults.length} of {comparison.length} games
           </p>
           <div className="flex gap-2">
@@ -717,27 +758,27 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
                 variant={viewMode === 'cards' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('cards')}
-                className="rounded-r-none"
+                className="rounded-r-none h-7 px-2"
               >
-                <LayoutGrid className="size-4" />
+                <LayoutGrid className="size-3" />
               </Button>
               <Button
                 variant={viewMode === 'table' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('table')}
-                className="rounded-l-none"
+                className="rounded-l-none h-7 px-2"
               >
-                <Table className="size-4" />
+                <Table className="size-3" />
               </Button>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={exportMissingList}
-              className="flex items-center gap-2"
+              className="flex items-center gap-1 h-7 px-2 text-xs"
             >
-              <Download className="size-4" />
-              Export Missing List
+              <Download className="size-3" />
+              Export
             </Button>
           </div>
         </div>
@@ -745,21 +786,21 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
 
       {/* Results */}
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all">All Games</TabsTrigger>
-          <TabsTrigger value="have">Have ({stats.have})</TabsTrigger>
-          <TabsTrigger value="missing">Missing ({stats.missing})</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 h-9">
+          <TabsTrigger value="all" className="text-xs">All Games</TabsTrigger>
+          <TabsTrigger value="have" className="text-xs">Have ({stats.have})</TabsTrigger>
+          <TabsTrigger value="missing" className="text-xs">Missing ({stats.missing})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all" className="space-y-2 mt-4">
+        <TabsContent value="all" className="space-y-1 mt-3">
           <GameList games={filteredResults} viewMode={viewMode} regions={regions} onAddToWantList={onAddToWantList} wantedGameIds={wantedGameIds} />
         </TabsContent>
 
-        <TabsContent value="have" className="space-y-2 mt-4">
+        <TabsContent value="have" className="space-y-1 mt-3">
           <GameList games={filteredResults.filter(m => m.hasRom)} viewMode={viewMode} regions={regions} onAddToWantList={onAddToWantList} wantedGameIds={wantedGameIds} />
         </TabsContent>
 
-        <TabsContent value="missing" className="space-y-2 mt-4">
+        <TabsContent value="missing" className="space-y-1 mt-3">
           <GameList games={filteredResults.filter(m => !m.hasRom)} viewMode={viewMode} regions={regions} onAddToWantList={onAddToWantList} wantedGameIds={wantedGameIds} />
         </TabsContent>
       </Tabs>
@@ -795,32 +836,32 @@ function GameList({ games, viewMode, regions, onAddToWantList, wantedGameIds }: 
 
   // Card view (default)
   return (
-    <div className="space-y-2 max-h-[600px] overflow-y-auto">
+    <div className="space-y-1 max-h-[600px] overflow-y-auto">
       {games.map((match, index) => (
-        <Card key={index} className={`p-4 ${match.hasRom ? 'neon-card' : ''}`} style={
+        <Card key={index} className={`p-2 ${match.hasRom ? 'neon-card' : ''}`} style={
           match.hasRom ? {
             borderColor: 'var(--neon-green)',
             boxShadow: '0 0 8px var(--neon-green)'
           } : undefined
         }>
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-0.5">
                 {match.hasRom ? (
-                  <CheckCircle2 className="size-5 shrink-0 stat-glow-green" />
+                  <CheckCircle2 className="size-4 shrink-0 stat-glow-green" />
                 ) : (
-                  <XCircle className="size-5 shrink-0 stat-glow-red" />
+                  <XCircle className="size-4 shrink-0 stat-glow-red" />
                 )}
-                <h3 className="font-medium truncate">{match.game.description || match.game.name}</h3>
+                <h3 className="text-sm font-medium truncate">{match.game.description || match.game.name}</h3>
               </div>
               
-              <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
-                <Badge variant="secondary" className="neon-badge">{match.systemName}</Badge>
+              <div className="flex items-center gap-1.5 flex-wrap text-xs text-muted-foreground">
+                <Badge variant="secondary" className="neon-badge text-xs py-0 h-5">{match.systemName}</Badge>
                 {match.game.region && (
-                  <Badge variant="outline" className="neon-badge">{match.game.region}</Badge>
+                  <Badge variant="outline" className="neon-badge text-xs py-0 h-5">{match.game.region}</Badge>
                 )}
                 {match.game.category && (
-                  <Badge variant="secondary" className="neon-badge">{match.game.category}</Badge>
+                  <Badge variant="secondary" className="neon-badge text-xs py-0 h-5">{match.game.category}</Badge>
                 )}
                 {match.hasRom && match.matchedRom && (
                   <span className="text-xs stat-glow-cyan">
@@ -830,21 +871,21 @@ function GameList({ games, viewMode, regions, onAddToWantList, wantedGameIds }: 
               </div>
 
               {match.game.rom && !match.hasRom && (
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   Looking for: {match.game.rom.name}
                 </p>
               )}
 
               {/* Show alternate regions if game is missing */}
               {!match.hasRom && match.alternateRegions && match.alternateRegions.length > 0 && (
-                <div className="mt-2 pt-2 border-t">
+                <div className="mt-1.5 pt-1.5 border-t">
                   <p className="text-xs font-medium text-muted-foreground mb-1">Alternate Regions:</p>
-                  <div className="flex gap-2 flex-wrap">
+                  <div className="flex gap-1.5 flex-wrap">
                     {match.alternateRegions.map((alt, i) => (
                       <Badge 
                         key={i} 
                         variant={alt.hasRom ? "default" : "outline"}
-                        className="neon-badge"
+                        className="neon-badge text-xs py-0 h-5"
                         style={alt.hasRom ? {
                           backgroundColor: 'var(--neon-blue)',
                           borderColor: 'var(--neon-blue)',
@@ -860,7 +901,7 @@ function GameList({ games, viewMode, regions, onAddToWantList, wantedGameIds }: 
             </div>
 
             {match.hasRom && (
-              <Badge className="shrink-0 stat-glow-green" style={{
+              <Badge className="shrink-0 stat-glow-green text-xs py-0 h-5" style={{
                 backgroundColor: 'var(--neon-green)',
                 borderColor: 'var(--neon-green)',
                 boxShadow: '0 0 10px var(--neon-green)'
@@ -887,13 +928,13 @@ function GameList({ games, viewMode, regions, onAddToWantList, wantedGameIds }: 
                   });
                 }}
                 disabled={wantedGameIds?.has(`${match.systemName}-${match.game.name || match.game.description}`)}
-                className="shrink-0"
+                className="shrink-0 h-7 px-2 text-xs"
                 style={{
                   borderColor: 'var(--neon-orange)',
                   color: wantedGameIds?.has(`${match.systemName}-${match.game.name || match.game.description}`) ? 'var(--muted-foreground)' : 'var(--neon-orange)'
                 }}
               >
-                <Star className="size-4 mr-1" />
+                <Star className="size-3 mr-1" />
                 {wantedGameIds?.has(`${match.systemName}-${match.game.name || match.game.description}`) ? 'In Want List' : 'Add to Want List'}
               </Button>
             )}

@@ -146,7 +146,10 @@ export function DatFileUploader({ onDatFilesLoaded, datFiles }: DatFileUploaderP
       if (parsedFiles.length === 0) {
         setError('No valid DAT files found in directory');
       } else {
-        onDatFilesLoaded(parsedFiles);
+        // Append to existing DAT files instead of replacing
+        const existingNames = new Set(datFiles.map(f => f.name));
+        const newFiles = parsedFiles.filter(f => !existingNames.has(f.name));
+        onDatFilesLoaded([...datFiles, ...newFiles]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load DAT files');
@@ -189,7 +192,10 @@ export function DatFileUploader({ onDatFilesLoaded, datFiles }: DatFileUploaderP
       if (parsedFiles.length === 0) {
         setError('No valid DAT files could be parsed');
       } else {
-        onDatFilesLoaded(parsedFiles);
+        // Append to existing DAT files instead of replacing
+        const existingNames = new Set(datFiles.map(f => f.name));
+        const newFiles = parsedFiles.filter(f => !existingNames.has(f.name));
+        onDatFilesLoaded([...datFiles, ...newFiles]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load DAT files');

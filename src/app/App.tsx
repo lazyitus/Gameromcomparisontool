@@ -156,6 +156,7 @@ export default function App() {
             />
           </TabsContent>
 
+          {/* Want List Tab */}
           <TabsContent value="wantlist">
             <WantList 
               wantedGames={wantedGames}
@@ -192,18 +193,6 @@ export default function App() {
                   />
                 </div>
               </div>
-            </Card>
-
-            {/* Info Footer */}
-            <Card className="mt-8 p-4 neon-card" style={{
-              borderColor: 'var(--neon-cyan)',
-              boxShadow: '0 0 10px var(--neon-cyan)'
-            }}>
-              <p className="text-sm">
-                <strong className="stat-glow-pink">⚠️ NOTE:</strong> All processing happens locally in your browser. No files are uploaded to any server.
-                DAT files are typically XML files from databases like No-Intro, Redump, or TOSEC.
-                Each ROM list should be a text file with one ROM filename per line, assigned to a specific system.
-              </p>
             </Card>
           </TabsContent>
         </Tabs>

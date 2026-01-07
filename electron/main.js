@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs/promises';
@@ -21,7 +21,11 @@ function createWindow() {
     },
     backgroundColor: '#0a0a0a',
     show: false,
+    autoHideMenuBar: true, // Hide menu bar by default
   });
+
+  // Remove the menu bar completely
+  Menu.setApplicationMenu(null);
 
   // Load the app
   if (process.env.VITE_DEV_SERVER_URL) {
