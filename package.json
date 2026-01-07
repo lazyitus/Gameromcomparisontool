@@ -16,11 +16,10 @@
     "preview": "vite preview",
     "verify": "node scripts/verify-build.js",
     "check": "node scripts/production-check.js",
-    "prepare-icon": "node scripts/download-icon.js",
-    "dist": "npm run prepare-icon && npm run build && electron-builder",
-    "dist:win": "npm run prepare-icon && npm run build && electron-builder --win",
-    "dist:mac": "npm run prepare-icon && npm run build && electron-builder --mac",
-    "dist:linux": "npm run prepare-icon && npm run build && electron-builder --linux"
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -105,7 +104,6 @@
   "build": {
     "appId": "com.romarcade.manager",
     "productName": "ROM Arcade Manager",
-    "icon": "build/icon.png",
     "directories": {
       "output": "release"
     },
