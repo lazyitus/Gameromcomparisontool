@@ -748,6 +748,22 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     return Array.from(categorySet).sort();
   }, [comparison]);
 
+  // Auto-clean selectedRegions when available regions change
+  // This removes selected regions that no longer exist in the current system
+  useEffect(() => {
+    const validRegions = new Set(regions);
+    const currentSelectedRegions = Array.from(selectedRegions);
+    const invalidRegions = currentSelectedRegions.filter(r => !validRegions.has(r));
+    
+    if (invalidRegions.length > 0) {
+      const cleanedRegions = new Set(currentSelectedRegions.filter(r => validRegions.has(r)));
+      if (cleanedRegions.size !== selectedRegions.size) {
+        console.log('🧹 Cleaning invalid regions:', invalidRegions);
+        setSelectedRegions(cleanedRegions);
+      }
+    }
+  }, [regions]); // Only depend on regions, not selectedRegions to avoid infinite loop
+
   // Filter results
   const filteredResults = useMemo(() => {
     return comparison.filter(match => {
@@ -1107,11 +1123,28 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
               </Select>
 
               <Popover>
-                <PopoverTrigger className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium transition-all h-8 px-2 border bg-background text-foreground hover:bg-accent hover:text-accent-foreground">
+                <PopoverTrigger 
+                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium transition-all h-8 px-2 border bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => {
+                    console.log('📊 Region Filter Opened:');
+                    console.log('  - Selected System:', selectedSystem);
+                    console.log('  - Available Regions:', regions);
+                    console.log('  - Selected Regions:', Array.from(selectedRegions));
+                    console.log('  - Total Games in Comparison:', comparison.length);
+                    console.log('  - Games in Current System:', comparison.filter(m => selectedSystem === 'all' || m.systemName === selectedSystem).length);
+                  }}
+                >
                   <Filter className="size-3" />
                   {selectedRegions.size > 0 ? `Regions (${selectedRegions.size})` : 'All Regions'}
                 </PopoverTrigger>
                 <PopoverContent className="p-3 space-y-1 max-h-60 overflow-y-auto">
+                  {regions.length === 0 && (
+                    <div className="text-xs text-muted-foreground p-2 mb-2 bg-yellow-500/10 border border-yellow-500/50 rounded">
+                      ⚠️ No regions detected for this system.
+                      <br />
+                      <span className="text-yellow-400">💡 Try the debug button below to see raw data.</span>
+                    </div>
+                  )}
                   <Button 
                     onClick={() => {
                       // Export region data for debugging
