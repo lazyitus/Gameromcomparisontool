@@ -996,6 +996,48 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
                   {selectedRegions.size > 0 ? `Regions (${selectedRegions.size})` : 'All Regions'}
                 </PopoverTrigger>
                 <PopoverContent className="p-3 space-y-1 max-h-60 overflow-y-auto">
+                  <Button 
+                    onClick={() => {
+                      // Export region data for debugging
+                      const rawRegions = new Map<string, Set<string>>();
+                      comparison.forEach(match => {
+                        if (selectedSystem === 'all' || match.systemName === selectedSystem) {
+                          if (match.game.region) {
+                            const sanitized = sanitizeRegion(match.game.region);
+                            if (!rawRegions.has(match.game.region)) {
+                              rawRegions.set(match.game.region, new Set());
+                            }
+                            if (sanitized) {
+                              rawRegions.get(match.game.region)!.add(sanitized);
+                            }
+                          }
+                        }
+                      });
+                      
+                      const exportData = {
+                        totalUniqueRegions: regions.length,
+                        regions: regions,
+                        rawToSanitized: Object.fromEntries(
+                          Array.from(rawRegions.entries()).map(([raw, sanitized]) => [
+                            raw,
+                            Array.from(sanitized)
+                          ])
+                        )
+                      };
+                      
+                      console.log('=== REGION DEBUG EXPORT ===');
+                      console.log(JSON.stringify(exportData, null, 2));
+                      console.log('=== END DEBUG ===');
+                      
+                      // Also copy to clipboard
+                      navigator.clipboard.writeText(JSON.stringify(exportData, null, 2));
+                      alert('Region data exported to console and copied to clipboard!');
+                    }}
+                    className="w-full mb-2 text-xs"
+                    variant="outline"
+                  >
+                    🐛 Export Region Debug Data
+                  </Button>
                   {regions.map(region => (
                     <div key={region} className="flex items-center">
                       <Checkbox
