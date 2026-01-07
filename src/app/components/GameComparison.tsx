@@ -350,6 +350,15 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     console.log('📦 processedDats:', processedDats);
     console.log('📦 processedRoms:', processedRoms);
     
+    // CRITICAL FIX: If processedDats is empty, clear systemsToMatch (user cleared everything)
+    if (processedDats.length === 0 && datFiles.length > 0) {
+      const systemsToMatchJson = localStorage.getItem('systemsToMatch');
+      if (systemsToMatchJson) {
+        console.log('🧹 processedDats is empty but systemsToMatch exists - clearing stale data');
+        localStorage.removeItem('systemsToMatch');
+      }
+    }
+    
     // Create BETTER identifiers for current data using filename + system + game count
     const currentDatIds = datFiles.map(d => `${d.name}-${d.system}-${d.games.length}`);
     const currentRomIds = romLists.map(r => `${r.systemName}-${r.roms.length}`);
