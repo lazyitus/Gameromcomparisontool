@@ -1141,52 +1141,8 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
                   {regions.length === 0 && (
                     <div className="text-xs text-muted-foreground p-2 mb-2 bg-yellow-500/10 border border-yellow-500/50 rounded">
                       ⚠️ No regions detected for this system.
-                      <br />
-                      <span className="text-yellow-400">💡 Try the debug button below to see raw data.</span>
                     </div>
                   )}
-                  <Button 
-                    onClick={() => {
-                      // Export region data for debugging
-                      const rawRegions = new Map<string, Set<string>>();
-                      comparison.forEach(match => {
-                        if (selectedSystem === 'all' || match.systemName === selectedSystem) {
-                          if (match.game.region) {
-                            const sanitized = sanitizeRegion(match.game.region);
-                            if (!rawRegions.has(match.game.region)) {
-                              rawRegions.set(match.game.region, new Set());
-                            }
-                            if (sanitized) {
-                              rawRegions.get(match.game.region)!.add(sanitized);
-                            }
-                          }
-                        }
-                      });
-                      
-                      const exportData = {
-                        totalUniqueRegions: regions.length,
-                        regions: regions,
-                        rawToSanitized: Object.fromEntries(
-                          Array.from(rawRegions.entries()).map(([raw, sanitized]) => [
-                            raw,
-                            Array.from(sanitized)
-                          ])
-                        )
-                      };
-                      
-                      console.log('=== REGION DEBUG EXPORT ===');
-                      console.log(JSON.stringify(exportData, null, 2));
-                      console.log('=== END DEBUG ===');
-                      
-                      // Also copy to clipboard
-                      navigator.clipboard.writeText(JSON.stringify(exportData, null, 2));
-                      alert('Region data exported to console and copied to clipboard!');
-                    }}
-                    className="w-full mb-2 text-xs"
-                    variant="outline"
-                  >
-                    🐛 Export Region Debug Data
-                  </Button>
                   {regions.map(region => (
                     <div key={region} className="flex items-center">
                       <Checkbox
