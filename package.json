@@ -125,7 +125,9 @@
       "target": [
         "nsis",
         "portable"
-      ]
+      ],
+      "sign": null,
+      "signingHashAlgorithms": []
     },
     "linux": {
       "target": [
