@@ -455,9 +455,13 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
       const existingSystemsToMatch = localStorage.getItem('systemsToMatch');
       const existingSystems = existingSystemsToMatch ? JSON.parse(existingSystemsToMatch) : { newDatSystems: [], changedRomSystems: [] };
       
+      // CRITICAL FIX: Filter out deleted systems from existing tracked systems
+      const validExistingNewDats = existingSystems.newDatSystems.filter((sys: string) => currentSystems.has(sys));
+      const validExistingChangedRoms = existingSystems.changedRomSystems.filter((sys: string) => currentSystems.has(sys));
+      
       const updatedSystemsToMatch = {
-        newDatSystems: [...new Set([...existingSystems.newDatSystems, ...newDats.map(d => d.system)])],
-        changedRomSystems: [...new Set([...existingSystems.changedRomSystems, ...newOrChangedRomSystems])]
+        newDatSystems: [...new Set([...validExistingNewDats, ...newDats.map(d => d.system)])],
+        changedRomSystems: [...new Set([...validExistingChangedRoms, ...newOrChangedRomSystems])]
       };
       
       console.log('💾 Setting systemsToMatch to:', updatedSystemsToMatch);

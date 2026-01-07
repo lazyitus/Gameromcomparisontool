@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Gamepad2, ListChecks, Settings } from 'lucide-react';
+import { Gamepad2, ListChecks, Settings, Trash2 } from 'lucide-react';
 import { DatFileUploader, type DatFile } from './components/DatFileUploader';
 import { RomListUploader, type RomList } from './components/RomListUploader';
 import { GameComparison } from './components/GameComparison';
@@ -9,6 +9,17 @@ import { Card } from './components/ui/card';
 import { Separator } from './components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Button } from './components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from './components/ui/alert-dialog';
 
 export default function App() {
   // Debug: Check if Electron API is available
@@ -89,6 +100,19 @@ export default function App() {
     setWantedGames(wantedGames.filter(g => g.id !== id));
   };
 
+  const clearAllData = () => {
+    // Clear all state
+    setDatFiles([]);
+    setRomLists([]);
+    setWantedGames([]);
+    setTriggerMatching(null);
+    
+    // Clear all localStorage
+    localStorage.clear();
+    
+    console.log('🗑️ ALL DATA CLEARED - App reset to first use state');
+  };
+
   const wantedGameIds = new Set(wantedGames.map(g => g.id));
 
   const tabs = [
@@ -133,7 +157,7 @@ export default function App() {
             textShadow: '0 0 5px var(--neon-cyan)',
             color: 'var(--neon-cyan)'
           }}>
-            ⚡ RETRO COLLECTION MANAGER ⚡
+            ��� RETRO COLLECTION MANAGER ⚡
           </p>
           <p className="text-sm mt-2 opacity-80">
             Upload DAT files and ROM lists to track your ultimate collection
@@ -265,6 +289,70 @@ export default function App() {
                     </div>
                   </>
                 )}
+                
+                {/* Clear All Data Button - Always visible */}
+                <Separator style={{ 
+                  backgroundColor: 'var(--neon-purple)',
+                  boxShadow: '0 0 5px var(--neon-purple)'
+                }} />
+                
+                <div>
+                  <h3 className="font-medium mb-3 text-lg text-red-400">⚠️ DANGER ZONE</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Reset the app to its initial state. This will permanently delete all uploaded DAT files, ROM lists, comparison results, and your want list.
+                  </p>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="lg"
+                        className="w-full"
+                        style={{
+                          backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                          borderColor: 'rgb(239, 68, 68)',
+                          boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)',
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-5 w-5" />
+                        CLEAR ALL DATA
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="neon-card">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl uppercase flex items-center gap-2">
+                          <Trash2 className="h-6 w-6 text-red-500" />
+                          Are you absolutely sure?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-base">
+                          This action <strong className="text-red-400">cannot be undone</strong>. This will permanently delete:
+                          <ul className="list-disc list-inside mt-3 space-y-1">
+                            <li>All uploaded DAT files ({datFiles.length} {datFiles.length === 1 ? 'file' : 'files'})</li>
+                            <li>All uploaded ROM lists ({romLists.length} {romLists.length === 1 ? 'list' : 'lists'})</li>
+                            <li>All comparison results and matching history</li>
+                            <li>Your entire want list ({wantedGames.length} {wantedGames.length === 1 ? 'game' : 'games'})</li>
+                            <li>All filter preferences and settings</li>
+                          </ul>
+                          <p className="mt-3 text-yellow-400">
+                            💡 The app will be reset to first-use state.
+                          </p>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={clearAllData}
+                          className="bg-red-600 hover:bg-red-700"
+                          style={{
+                            boxShadow: '0 0 15px rgba(239, 68, 68, 0.5)',
+                          }}
+                        >
+                          Yes, Delete Everything
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
             </Card>
           </TabsContent>
