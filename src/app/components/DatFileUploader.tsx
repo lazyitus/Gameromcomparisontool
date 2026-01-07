@@ -62,8 +62,31 @@ export function DatFileUploader({ onDatFilesLoaded, datFiles }: DatFileUploaderP
         const description = gameEl.querySelector('description')?.textContent || name;
         
         // Extract region from name or description
-        const regionMatch = description.match(/\\(([^)]*(?:USA|Europe|Japan|World|Asia|Korea|Brazil|Spain|France|Germany|Italy|UK|China)[^)]*)\\)/i);
-        const region = regionMatch ? regionMatch[1] : undefined;
+        // Try multiple patterns to catch different region formats
+        let region: string | undefined;
+        
+        // Pattern 1: Standard console format like (USA), (Europe), (Japan, USA)
+        let regionMatch = description.match(/\(([^)]*(?:USA|Europe|Japan|World|Asia|Korea|Brazil|Spain|France|Germany|Italy|UK|China|Taiwan|Australia|Sweden|Netherlands|Canada|Mexico)[^)]*)\)/i);
+        if (regionMatch) {
+          region = regionMatch[1];
+        } else {
+          // Pattern 2: Arcade format with regions after game name (e.g., "Game Name (Japan)")
+          // This catches regions not necessarily in standard format
+          regionMatch = description.match(/\((USA|Europe|Japan|World|Asia|Korea|Brazil|Spain|France|Germany|Italy|UK|China|Taiwan|Australia|Sweden|Netherlands|Canada|Mexico|Jpn|Eur|US|EU|JP|AS|KR|TW|AU|SE|NL|CA|MX)[^\)]*\)/i);
+          if (regionMatch) {
+            region = regionMatch[1];
+          } else {
+            // Pattern 3: Check for standalone region indicators
+            const lowerDesc = description.toLowerCase();
+            if (lowerDesc.includes('japan') || lowerDesc.includes('(j)')) region = 'Japan';
+            else if (lowerDesc.includes('usa') || lowerDesc.includes('(u)') || lowerDesc.includes('us)')) region = 'USA';
+            else if (lowerDesc.includes('europe') || lowerDesc.includes('(e)')) region = 'Europe';
+            else if (lowerDesc.includes('world') || lowerDesc.includes('(w)')) region = 'World';
+            else if (lowerDesc.includes('asia')) region = 'Asia';
+            else if (lowerDesc.includes('korea')) region = 'Korea';
+            else if (lowerDesc.includes('taiwan')) region = 'Taiwan';
+          }
+        }
         
         // Check for bootleg/clone attributes
         const cloneofAttr = gameEl.getAttribute('cloneof');
