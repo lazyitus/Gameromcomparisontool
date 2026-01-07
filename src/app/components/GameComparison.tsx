@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback, memo } from 'react';
+import { useMemo, useState, useEffect, useCallback, memo, useRef } from 'react';
 import { CheckCircle2, XCircle, Star, Search, Filter, Download, LayoutGrid, Table, Gamepad2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -175,12 +175,22 @@ const isOfficialRelease = (name: string): boolean => {
   return !unofficialTags.some(tag => lowerName.includes(tag));
 };
 
-const hasRevisionTag = (name: string): boolean => {
+const hasRevisionTag = (name: string, game?: any): boolean => {
+  // For arcade games with cloneof attribute, they are clones/revisions
+  if (game && game.cloneof) {
+    return true;
+  }
+  
   const lowerName = name.toLowerCase();
-  // Check if the name contains revision tags
+  // Check if the name contains revision tags, set markers, or regional variants
   return /\(rev\s*\d*[a-z]?\)/i.test(lowerName) || 
          /\(v\d+(\.\d+)*\)/i.test(lowerName) ||
-         /\(version\s*\d+\)/i.test(lowerName);
+         /\(version\s*\d+\)/i.test(lowerName) ||
+         /\(set\s*\d+\)/i.test(lowerName) ||
+         /\(alt\s*\d*\)/i.test(lowerName) ||
+         // Arcade-specific revision patterns
+         /\d{2}\/\d{2}\/\d{2}/i.test(lowerName) || // Date codes like 94/07/18
+         /revision\s*[a-z]/i.test(lowerName);
 };
 
 export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGameIds, triggerMatching, setTriggerMatching }: GameComparisonProps) {
@@ -223,6 +233,9 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     return saved ? JSON.parse(saved) : true; // Default to visible
   });
 
+  // Track if this is the initial mount to prevent clearing regions on mount
+  const isInitialMount = useRef(true);
+
   // Save all filter states to localStorage
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -233,8 +246,12 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
 
   useEffect(() => {
     localStorage.setItem('filterSelectedSystem', selectedSystem);
-    // Clear region selections when system changes
-    setSelectedRegions(new Set());
+    // Clear region selections when system changes (but not on initial mount)
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+    } else {
+      setSelectedRegions(new Set());
+    }
   }, [selectedSystem]);
 
   useEffect(() => {
@@ -768,9 +785,9 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
 
       // Revision filter
       if (revisionFilter !== 'all') {
-        const hasRev = hasRevisionTag(match.game.name || match.game.description || '');
-        if (revisionFilter === 'base' && hasRev) return false; // Exclude revisions
-        if (revisionFilter === 'revisions' && !hasRev) return false; // Only show revisions
+        const hasRev = hasRevisionTag(match.game.name || match.game.description || '', match.game);
+        if (revisionFilter === 'base' && hasRev) return false; // Exclude revisions/clones
+        if (revisionFilter === 'revisions' && !hasRev) return false; // Only show revisions/clones
       }
 
       return true;

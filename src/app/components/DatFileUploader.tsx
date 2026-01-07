@@ -23,6 +23,8 @@ interface Game {
     sha1?: string;
   };
   category?: string;
+  cloneof?: string; // For arcade clones/revisions
+  isParent?: boolean; // Parent game in a clone family
 }
 
 interface DatFileUploaderProps {
@@ -60,15 +62,23 @@ export function DatFileUploader({ onDatFilesLoaded, datFiles }: DatFileUploaderP
         const description = gameEl.querySelector('description')?.textContent || name;
         
         // Extract region from name or description
-        const regionMatch = description.match(/\(([^)]*(?:USA|Europe|Japan|World|Asia|Korea|Brazil|Spain|France|Germany|Italy|UK|China)[^)]*)\)/i);
+        const regionMatch = description.match(/\\(([^)]*(?:USA|Europe|Japan|World|Asia|Korea|Brazil|Spain|France|Germany|Italy|UK|China)[^)]*)\\)/i);
         const region = regionMatch ? regionMatch[1] : undefined;
+        
+        // Check for bootleg/clone attributes
+        const cloneofAttr = gameEl.getAttribute('cloneof');
+        const commentEl = gameEl.querySelector('comment');
+        const commentText = commentEl?.textContent?.toLowerCase() || '';
         
         // Determine category based on various markers
         let category = 'Commercial';
         const lowerDesc = description.toLowerCase();
         const lowerName = name.toLowerCase();
         
-        if (lowerDesc.includes('(proto') || lowerName.includes('proto')) {
+        // Check for bootleg in comment or description
+        if (commentText.includes('bootleg') || lowerDesc.includes('bootleg')) {
+          category = 'Pirate/Hack';
+        } else if (lowerDesc.includes('(proto') || lowerName.includes('proto')) {
           category = 'Prototype';
         } else if (lowerDesc.includes('(beta') || lowerName.includes('beta')) {
           category = 'Beta';
@@ -93,12 +103,18 @@ export function DatFileUploader({ onDatFilesLoaded, datFiles }: DatFileUploaderP
           sha1: romEl.getAttribute('sha1') || undefined,
         } : { name };
 
+        // Check for cloneof attribute (arcade DATs use this for revisions/regional variants)
+        const cloneof = cloneofAttr ? cloneofAttr : undefined;
+        const isParent = !cloneofAttr; // If no cloneof, it's a parent game
+
         return {
           name,
           description,
           region,
           rom,
           category,
+          cloneof,
+          isParent,
         };
       });
 
