@@ -3,7 +3,7 @@
 :root {
   /* 🕹️ NEON 80s ARCADE THEME 🕹️ */
   
-  /* Neon Colors - Dark Theme */
+  /* Neon Colors */
   --neon-pink: #ff00ff;
   --neon-cyan: #00ffff;
   --neon-purple: #9d00ff;
@@ -17,12 +17,6 @@
   --arcade-purple: #1a0033;
   --arcade-grid: #2d0066;
   
-  /* Light Arcade Background */
-  --arcade-light: #f5f0ff;
-  --arcade-light-purple: #e6d9ff;
-  --arcade-light-grid: #d4c2ff;
-  
-  /* Dark Theme (Default) */
   --font-size: 16px;
   --background: var(--arcade-dark);
   --foreground: var(--neon-cyan);
@@ -63,49 +57,39 @@
   --sidebar-ring: var(--neon-pink);
 }
 
-.light {
-  /* 🌞 LIGHT ARCADE THEME 🌞 */
-  
-  /* Darker neon colors for better readability on light backgrounds */
-  --neon-cyan: #0088aa;
-  --neon-green: #00aa00;
-  --neon-orange: #884400;
-  --neon-yellow: #aa7700;
-  --neon-blue: #0055cc;
-  
-  --background: var(--arcade-light);
-  --foreground: #1a0066;
-  --card: var(--arcade-light-purple);
-  --card-foreground: #1a0066;
-  --popover: var(--arcade-light-purple);
-  --popover-foreground: #1a0066;
+.dark {
+  /* Same as root - we're always in neon mode! */
+  --background: var(--arcade-dark);
+  --foreground: var(--neon-cyan);
+  --card: var(--arcade-purple);
+  --card-foreground: var(--neon-cyan);
+  --popover: var(--arcade-purple);
+  --popover-foreground: var(--neon-cyan);
   --primary: var(--neon-pink);
-  --primary-foreground: #ffffff;
-  --secondary: var(--arcade-light-grid);
+  --primary-foreground: var(--arcade-dark);
+  --secondary: var(--arcade-grid);
   --secondary-foreground: var(--neon-purple);
-  --muted: var(--arcade-light-grid);
-  --muted-foreground: #6644cc;
+  --muted: var(--arcade-grid);
+  --muted-foreground: #8866ff;
   --accent: var(--neon-purple);
-  --accent-foreground: #ffffff;
+  --accent-foreground: var(--neon-cyan);
   --destructive: #ff0055;
   --destructive-foreground: #ffffff;
   --border: var(--neon-purple);
-  --input: transparent;
-  --input-background: rgba(212, 194, 255, 0.5);
-  --switch-background: var(--arcade-light-grid);
+  --input: var(--arcade-grid);
+  --ring: var(--neon-pink);
   --font-weight-medium: 600;
   --font-weight-normal: 500;
-  --ring: var(--neon-pink);
   --chart-1: var(--neon-pink);
   --chart-2: var(--neon-cyan);
   --chart-3: var(--neon-purple);
   --chart-4: var(--neon-green);
   --chart-5: var(--neon-orange);
-  --sidebar: var(--arcade-light-purple);
-  --sidebar-foreground: #1a0066;
+  --sidebar: var(--arcade-purple);
+  --sidebar-foreground: var(--neon-cyan);
   --sidebar-primary: var(--neon-pink);
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--arcade-light-grid);
+  --sidebar-primary-foreground: var(--arcade-dark);
+  --sidebar-accent: var(--arcade-grid);
   --sidebar-accent-foreground: var(--neon-purple);
   --sidebar-border: var(--neon-purple);
   --sidebar-ring: var(--neon-pink);
@@ -170,15 +154,6 @@
     position: relative;
   }
 
-  /* Light theme background grid */
-  .light body {
-    background-image: 
-      linear-gradient(rgba(157, 0, 255, 0.15) 2px, transparent 2px),
-      linear-gradient(90deg, rgba(157, 0, 255, 0.15) 2px, transparent 2px),
-      linear-gradient(rgba(255, 0, 255, 0.08) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 0, 255, 0.08) 1px, transparent 1px);
-  }
-
   /**
   * Default typography styles for HTML elements (h1-h4, p, label, button, input).
   * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
@@ -209,13 +184,6 @@
       0 0 20px var(--neon-cyan);
     color: var(--neon-cyan);
     letter-spacing: 0.05em;
-  }
-
-  /* Light theme heading adjustments */
-  .light h2 {
-    text-shadow: 
-      0 0 8px var(--neon-cyan),
-      0 0 15px var(--neon-cyan);
   }
 
   h3 {
@@ -307,19 +275,5 @@
   /* Scrollbar corner (where vertical and horizontal meet) */
   ::-webkit-scrollbar-corner {
     background: var(--arcade-dark);
-  }
-
-  /* Light theme scrollbar styles */
-  .light * {
-    scrollbar-color: var(--neon-purple) var(--arcade-light);
-  }
-
-  .light ::-webkit-scrollbar-track {
-    background: var(--arcade-light);
-    border: 1px solid rgba(157, 0, 255, 0.3);
-  }
-
-  .light ::-webkit-scrollbar-corner {
-    background: var(--arcade-light);
   }
 }

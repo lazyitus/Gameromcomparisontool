@@ -19,7 +19,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    backgroundColor: '#0a0015', // Dark theme default
+    backgroundColor: '#0a0015',
     show: false,
     autoHideMenuBar: true,
     frame: false, // Remove native title bar

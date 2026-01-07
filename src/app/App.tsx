@@ -17,23 +17,6 @@ export default function App() {
     console.log('Available methods:', window.electronAPI ? Object.keys(window.electronAPI) : 'NOT AVAILABLE');
   }, []);
 
-  // Theme state with localStorage persistence
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    const saved = localStorage.getItem('theme');
-    return (saved as 'light' | 'dark') || 'dark';
-  });
-
-  // Apply theme to document
-  useEffect(() => {
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  };
-
   // DAT files with localStorage persistence
   const [datFiles, setDatFiles] = useState<DatFile[]>(() => {
     const saved = localStorage.getItem('datFiles');
@@ -125,7 +108,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-background">
       {/* Custom Title Bar */}
-      <TitleBar theme={theme} onThemeToggle={toggleTheme} />
+      <TitleBar />
       
       {/* Main Content - Add top padding for title bar */}
       <div className="container mx-auto py-8 px-4 max-w-7xl" style={{ paddingTop: 'calc(2rem + 32px)' }}>
