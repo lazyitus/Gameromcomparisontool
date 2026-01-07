@@ -286,45 +286,95 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     }
   }, [comparisonResults]);
 
-  // Reset matching state when DAT files or ROM lists change
+  // Smart incremental matching - only process NEW DAT files and ROM lists
   useEffect(() => {
-    // Create a hash of the current data to detect changes
-    const currentHash = JSON.stringify({
-      datCount: datFiles.length,
-      romCount: romLists.length,
-      systems: [...datFiles.map(d => d.system), ...romLists.map(r => r.systemName)].sort().join(',')
-    });
+    // Get previously processed data
+    const processedDatsJson = localStorage.getItem('processedDats');
+    const processedDats = processedDatsJson ? JSON.parse(processedDatsJson) : [];
     
-    const savedHash = localStorage.getItem('dataHash');
+    const processedRomsJson = localStorage.getItem('processedRomLists');
+    const processedRoms = processedRomsJson ? JSON.parse(processedRomsJson) : [];
     
-    if (savedHash !== currentHash) {
-      // Data has changed, reset matching
+    // Create identifiers for current data
+    const currentDatIds = datFiles.map(d => `${d.system}-${d.games.length}`);
+    const currentRomIds = romLists.map(r => r.systemName);
+    
+    // Find NEW DAT files (not in processed list)
+    const newDats = datFiles.filter((d, i) => !processedDats.includes(currentDatIds[i]));
+    
+    // Find ROM lists for systems that weren't processed before OR that have changed
+    const newOrChangedRomSystems = romLists.filter(r => {
+      const wasProcessed = processedRoms.includes(r.systemName);
+      if (!wasProcessed) return true;
+      
+      // Check if this ROM list changed (different ROM count)
+      const oldRomListJson = localStorage.getItem(`romList-${r.systemName}`);
+      if (!oldRomListJson) return true;
+      
+      const oldRomList = JSON.parse(oldRomListJson);
+      return oldRomList.roms.length !== r.roms.length;
+    }).map(r => r.systemName);
+    
+    // If we have new DAT files or changed ROM lists, mark as needing matching
+    if (newDats.length > 0 || newOrChangedRomSystems.length > 0) {
       setMatchingState('idle');
-      setComparisonResults([]);
-      localStorage.setItem('dataHash', currentHash);
-      localStorage.removeItem('comparisonResults');
+      
+      // Store which systems need re-matching
+      localStorage.setItem('systemsToMatch', JSON.stringify({
+        newDatSystems: newDats.map(d => d.system),
+        changedRomSystems: newOrChangedRomSystems
+      }));
     }
+    
+    // Store current ROM lists for change detection
+    romLists.forEach(r => {
+      localStorage.setItem(`romList-${r.systemName}`, JSON.stringify({ roms: r.roms }));
+    });
   }, [datFiles, romLists]);
 
-  // Start matching process
+  // Start matching process - INCREMENTAL VERSION
   const startMatching = async () => {
     setMatchingState('matching');
     
+    // Get which systems need matching
+    const systemsToMatchJson = localStorage.getItem('systemsToMatch');
+    const systemsToMatch = systemsToMatchJson ? JSON.parse(systemsToMatchJson) : { newDatSystems: [], changedRomSystems: [] };
+    
+    const systemsNeedingMatch = new Set([
+      ...systemsToMatch.newDatSystems,
+      ...systemsToMatch.changedRomSystems
+    ]);
+    
+    // If no specific systems to match, match everything (first time)
+    const isFirstTimeMatch = systemsNeedingMatch.size === 0;
+    
     // Use setTimeout to allow UI to update before heavy computation
     setTimeout(() => {
-      const results: GameMatch[] = [];
+      const newResults: GameMatch[] = [];
       let totalGames = 0;
       let processedGames = 0;
 
-      // Calculate total games for progress
+      // Calculate total games for progress (only for systems that need matching)
       datFiles.forEach(datFile => {
-        totalGames += datFile.games.length;
+        if (isFirstTimeMatch || systemsNeedingMatch.has(datFile.system)) {
+          totalGames += datFile.games.length;
+        }
       });
 
       setMatchProgress({ current: 0, total: totalGames, system: '' });
 
-      // Process each system
+      // Get existing results to preserve
+      const existingResults = isFirstTimeMatch ? [] : comparisonResults.filter(
+        result => !systemsNeedingMatch.has(result.systemName)
+      );
+
+      // Process each system (only new/changed ones)
       datFiles.forEach(datFile => {
+        // Skip systems that don't need matching
+        if (!isFirstTimeMatch && !systemsNeedingMatch.has(datFile.system)) {
+          return;
+        }
+        
         // Find the ROM list for this system
         const romList = romLists.find(list => list.systemName === datFile.system);
         const romFiles = romList ? romList.roms : [];
@@ -337,15 +387,18 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
           let matchMethod: 'filename' | 'exact' | undefined;
 
           // Try to match by filename (only against ROMs for this system)
-          if (game.rom?.name) {
-            const exactMatch = romFiles.find(rom => rom.name === game.rom!.name);
+          // Use game.rom.name if available, otherwise fall back to game.name
+          const romNameToMatch = game.rom?.name || game.name;
+          
+          if (romNameToMatch) {
+            const exactMatch = romFiles.find(rom => rom.name === romNameToMatch);
             if (exactMatch) {
               hasRom = true;
               matchedRom = exactMatch;
               matchMethod = 'exact';
             } else {
               // Try improved fuzzy matching with the new algorithm
-              const fuzzyMatch = romFiles.find(rom => matchRomToGame(rom.name, game.rom!.name));
+              const fuzzyMatch = romFiles.find(rom => matchRomToGame(rom.name, romNameToMatch));
               if (fuzzyMatch) {
                 hasRom = true;
                 matchedRom = fuzzyMatch;
@@ -397,7 +450,7 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
             }
           });
 
-          results.push({
+          newResults.push({
             game: {
               ...game,
               description: game.description || game.name,
@@ -419,9 +472,18 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
       });
 
       // Set final results
-      setComparisonResults(results);
+      setComparisonResults([...existingResults, ...newResults]);
       setMatchProgress({ current: totalGames, total: totalGames, system: 'Complete' });
       setMatchingState('complete');
+      
+      // Save which DAT files and ROM lists we've processed
+      const currentDatIds = datFiles.map(d => `${d.system}-${d.games.length}`);
+      const currentRomIds = romLists.map(r => r.systemName);
+      localStorage.setItem('processedDats', JSON.stringify(currentDatIds));
+      localStorage.setItem('processedRomLists', JSON.stringify(currentRomIds));
+      
+      // Clear the systems to match list
+      localStorage.removeItem('systemsToMatch');
     }, 100);
   };
 
