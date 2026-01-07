@@ -89,6 +89,69 @@ const normalizeForMatching = (name: string): string => {
     .trim();
 };
 
+// Sanitize region names to extract only country names
+const sanitizeRegion = (region: string | undefined): string | null => {
+  if (!region) return null;
+  
+  const regionLower = region.toLowerCase().trim();
+  
+  // Filter out non-region data (player counts, disc info, etc.)
+  const nonRegionPatterns = [
+    /^\d+\s*players?$/i,
+    /^disc\s*\d+$/i,
+    /^disk\s*\d+$/i,
+    /^side\s*[ab]$/i,
+    /^rev\s*\d+$/i,
+    /^v\d+/i,
+    /^version/i,
+    /^beta/i,
+    /^demo/i,
+    /^proto/i,
+    /^sample/i,
+  ];
+  
+  if (nonRegionPatterns.some(pattern => pattern.test(regionLower))) {
+    return null;
+  }
+  
+  // Map of country keywords to standard names
+  // Order matters - check more specific patterns first
+  const countryMap: Array<{ keywords: string[], name: string }> = [
+    { keywords: ['usa', 'us', 'united states', 'america'], name: 'USA' },
+    { keywords: ['europe', 'eu', 'eur'], name: 'Europe' },
+    { keywords: ['japan', 'jp', 'jpn'], name: 'Japan' },
+    { keywords: ['world'], name: 'World' },
+    { keywords: ['asia'], name: 'Asia' },
+    { keywords: ['china', 'cn'], name: 'China' },
+    { keywords: ['korea', 'kr'], name: 'Korea' },
+    { keywords: ['australia', 'au'], name: 'Australia' },
+    { keywords: ['brazil', 'br'], name: 'Brazil' },
+    { keywords: ['canada', 'ca'], name: 'Canada' },
+    { keywords: ['france', 'fr'], name: 'France' },
+    { keywords: ['germany', 'de'], name: 'Germany' },
+    { keywords: ['italy', 'it'], name: 'Italy' },
+    { keywords: ['spain', 'es'], name: 'Spain' },
+    { keywords: ['uk', 'united kingdom', 'britain'], name: 'UK' },
+    { keywords: ['scandinavia'], name: 'Scandinavia' },
+    { keywords: ['netherlands', 'nl'], name: 'Netherlands' },
+    { keywords: ['russia', 'ru'], name: 'Russia' },
+  ];
+  
+  // Check if any country keyword appears in the region string
+  for (const country of countryMap) {
+    for (const keyword of country.keywords) {
+      // Use word boundaries to match whole words only
+      const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+      if (regex.test(regionLower)) {
+        return country.name;
+      }
+    }
+  }
+  
+  // If nothing matches, return null (filter out this region)
+  return null;
+};
+
 // More aggressive matching that handles partial matches better
 const matchRomToGame = (romName: string, gameName: string): boolean => {
   const romNorm = normalizeForMatching(romName);
@@ -228,6 +291,8 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
 
   useEffect(() => {
     localStorage.setItem('filterSelectedSystem', selectedSystem);
+    // Clear region selections when system changes
+    setSelectedRegions(new Set());
   }, [selectedSystem]);
 
   useEffect(() => {
@@ -550,12 +615,18 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
   const regions = useMemo(() => {
     const regionSet = new Set<string>();
     comparison.forEach(match => {
-      if (match.game.region) {
-        regionSet.add(match.game.region);
+      // Only include regions from the selected system
+      if (selectedSystem === 'all' || match.systemName === selectedSystem) {
+        if (match.game.region) {
+          const sanitizedRegion = sanitizeRegion(match.game.region);
+          if (sanitizedRegion) {
+            regionSet.add(sanitizedRegion);
+          }
+        }
       }
     });
     return Array.from(regionSet).sort();
-  }, [comparison]);
+  }, [comparison, selectedSystem]);
 
   const categories = useMemo(() => {
     const categorySet = new Set<string>();
@@ -586,7 +657,8 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
 
       // Region filter
       if (selectedRegions.size > 0) {
-        if (!selectedRegions.has(match.game.region || '')) return false;
+        const sanitizedGameRegion = sanitizeRegion(match.game.region);
+        if (!sanitizedGameRegion || !selectedRegions.has(sanitizedGameRegion)) return false;
       }
 
       // Category filter
@@ -647,8 +719,44 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
 
   // Show start button if no matching has been done yet
   if (matchingState === 'idle') {
-    const totalDatGames = datFiles.reduce((sum, dat) => sum + dat.games.length, 0);
-    const totalRomCount = romLists.reduce((sum, list) => sum + list.roms.length, 0);
+    // Get which systems need matching
+    const systemsToMatchJson = localStorage.getItem('systemsToMatch');
+    const systemsToMatch = systemsToMatchJson ? JSON.parse(systemsToMatchJson) : { newDatSystems: [], changedRomSystems: [] };
+    
+    const systemsNeedingMatch = [...new Set([
+      ...systemsToMatch.newDatSystems,
+      ...systemsToMatch.changedRomSystems
+    ])];
+    
+    // If there are specific systems to match, show only those
+    const isFirstTimeMatch = systemsNeedingMatch.length === 0;
+    
+    // Calculate counts for NEW systems only (or all if first time)
+    let newSystemCount = 0;
+    let newGameCount = 0;
+    let newRomCount = 0;
+    
+    if (isFirstTimeMatch) {
+      // First time - show all
+      newSystemCount = datFiles.length;
+      newGameCount = datFiles.reduce((sum, dat) => sum + dat.games.length, 0);
+      newRomCount = romLists.reduce((sum, list) => sum + list.roms.length, 0);
+    } else {
+      // Show only new/changed systems
+      newSystemCount = systemsNeedingMatch.length;
+      
+      datFiles.forEach(dat => {
+        if (systemsNeedingMatch.includes(dat.system)) {
+          newGameCount += dat.games.length;
+        }
+      });
+      
+      romLists.forEach(list => {
+        if (systemsNeedingMatch.includes(list.systemName)) {
+          newRomCount += list.roms.length;
+        }
+      });
+    }
     
     return (
       <Card className="p-12 text-center neon-card">
@@ -661,18 +769,40 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
             </div>
           </div>
           
-          <h2 className="text-3xl font-bold uppercase stat-glow-pink">READY TO MATCH</h2>
+          <h2 className="text-3xl font-bold uppercase stat-glow-pink">
+            {isFirstTimeMatch ? 'READY TO MATCH' : 'NEW SYSTEMS TO MATCH'}
+          </h2>
           
-          <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+          {!isFirstTimeMatch && systemsNeedingMatch.length > 0 && (
+            <div className="p-4 bg-cyan-500/10 border border-cyan-500 rounded-md">
+              <p className="text-sm stat-glow-cyan font-medium mb-2">
+                {systemsNeedingMatch.length === 1 ? '1 New System Detected' : `${systemsNeedingMatch.length} New Systems Detected`}
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {systemsNeedingMatch.map(system => (
+                  <Badge key={system} className="neon-badge" style={{
+                    borderColor: 'var(--neon-cyan)',
+                    color: 'var(--neon-cyan)'
+                  }}>
+                    {system}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-3 gap-4 max-w-lg mx-auto">
             <Card className="p-4 neon-card">
-              <p className="text-sm text-muted-foreground uppercase">DAT Files</p>
-              <p className="text-2xl font-bold stat-glow-cyan">{datFiles.length}</p>
-              <p className="text-xs text-muted-foreground mt-1">{totalDatGames.toLocaleString()} games</p>
+              <p className="text-sm text-muted-foreground uppercase">{isFirstTimeMatch ? 'Systems' : 'New Systems'}</p>
+              <p className="text-2xl font-bold stat-glow-cyan">{newSystemCount}</p>
             </Card>
             <Card className="p-4 neon-card">
-              <p className="text-sm text-muted-foreground uppercase">ROM Lists</p>
-              <p className="text-2xl font-bold stat-glow-pink">{romLists.length}</p>
-              <p className="text-xs text-muted-foreground mt-1">{totalRomCount.toLocaleString()} ROMs</p>
+              <p className="text-sm text-muted-foreground uppercase">Games</p>
+              <p className="text-2xl font-bold stat-glow-pink">{newGameCount.toLocaleString()}</p>
+            </Card>
+            <Card className="p-4 neon-card">
+              <p className="text-sm text-muted-foreground uppercase">ROMs</p>
+              <p className="text-2xl font-bold stat-glow-purple">{newRomCount.toLocaleString()}</p>
             </Card>
           </div>
 
@@ -683,7 +813,10 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
           ) : (
             <>
               <p className="text-muted-foreground">
-                Click below to start matching your ROMs against the DAT database.
+                {isFirstTimeMatch 
+                  ? 'Click below to start matching your ROMs against the DAT database.'
+                  : `Click below to match the ${systemsNeedingMatch.length === 1 ? 'new system' : 'new systems'}.`
+                }
                 <br />
                 This may take a few moments for large collections.
               </p>
@@ -697,7 +830,7 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
                 }}
               >
                 <Gamepad2 className="mr-2 h-6 w-6" />
-                START MATCHING
+                {isFirstTimeMatch ? 'START MATCHING' : `MATCH ${systemsNeedingMatch.length === 1 ? 'SYSTEM' : 'SYSTEMS'}`}
               </Button>
             </>
           )}
