@@ -370,7 +370,10 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     const currentSystems = new Set(datFiles.map(d => d.system));
     
     // DELETION DETECTION: Check if any systems were removed
+    // Check BOTH processedDats AND comparisonResults for previously existing systems
     const previousSystems = new Set<string>();
+    
+    // Add systems from processedDats
     processedDats.forEach((id: string) => {
       const parts = id.split('-');
       if (parts.length >= 2) {
@@ -380,7 +383,14 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
       }
     });
     
+    // ALSO add systems from comparisonResults (in case processedDats was cleared)
+    comparisonResults.forEach(result => {
+      previousSystems.add(result.systemName);
+    });
+    
     const deletedSystems = Array.from(previousSystems).filter(sys => !currentSystems.has(sys));
+    
+    console.log('🗑️ Deleted systems detected:', deletedSystems);
     
     // If systems were deleted, clean up comparison results
     if (deletedSystems.length > 0 && comparisonResults.length > 0) {
