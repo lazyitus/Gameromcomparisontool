@@ -105,8 +105,7 @@
     "appId": "com.romarcade.manager",
     "productName": "ROM Arcade Manager",
     "directories": {
-      "output": "release",
-      "buildResources": "build"
+      "output": "release"
     },
     "files": [
       "dist/**/*",
