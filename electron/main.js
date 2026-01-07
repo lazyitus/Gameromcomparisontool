@@ -19,9 +19,11 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    backgroundColor: '#0a0a0a',
+    backgroundColor: '#0a0015', // Dark theme default
     show: false,
-    autoHideMenuBar: true, // Hide menu bar by default
+    autoHideMenuBar: true,
+    frame: false, // Remove native title bar
+    titleBarStyle: 'hidden', // Additional setting for macOS
   });
 
   // Remove the menu bar completely
@@ -184,4 +186,27 @@ ipcMain.handle('select-romlist-files', async () => {
   );
 
   return fileContents;
+});
+
+// Window control handlers
+ipcMain.handle('minimize-window', () => {
+  if (mainWindow) {
+    mainWindow.minimize();
+  }
+});
+
+ipcMain.handle('maximize-window', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+
+ipcMain.handle('close-window', () => {
+  if (mainWindow) {
+    mainWindow.close();
+  }
 });

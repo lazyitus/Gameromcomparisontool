@@ -179,20 +179,82 @@ const hasRevisionTag = (name: string): boolean => {
 };
 
 export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGameIds }: GameComparisonProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSystem, setSelectedSystem] = useState<string>('all');
-  const [selectedRegions, setSelectedRegions] = useState<Set<string>>(new Set());
-  const [statusFilter, setStatusFilter] = useState<'all' | 'have' | 'missing' | 'missing-alt' | 'missing-all'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [releaseTypeFilter, setReleaseTypeFilter] = useState<'all' | 'official' | 'unofficial'>('all');
-  const [revisionFilter, setRevisionFilter] = useState<'all' | 'base' | 'revisions'>('all');
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  // Filter states with localStorage persistence
+  const [searchQuery, setSearchQuery] = useState<string>(() => {
+    return localStorage.getItem('filterSearchQuery') || '';
+  });
+  
+  const [selectedSystem, setSelectedSystem] = useState<string>(() => {
+    return localStorage.getItem('filterSelectedSystem') || 'all';
+  });
+  
+  const [selectedRegions, setSelectedRegions] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('filterSelectedRegions');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+  
+  const [statusFilter, setStatusFilter] = useState<'all' | 'have' | 'missing' | 'missing-alt' | 'missing-all'>(() => {
+    const saved = localStorage.getItem('filterStatusFilter');
+    return (saved as 'all' | 'have' | 'missing' | 'missing-alt' | 'missing-all') || 'all';
+  });
+  
+  const [categoryFilter, setCategoryFilter] = useState<string>(() => {
+    return localStorage.getItem('filterCategoryFilter') || 'all';
+  });
+  
+  const [releaseTypeFilter, setReleaseTypeFilter] = useState<'all' | 'official' | 'unofficial'>(() => {
+    const saved = localStorage.getItem('filterReleaseTypeFilter');
+    return (saved as 'all' | 'official' | 'unofficial') || 'all';
+  });
+  
+  const [revisionFilter, setRevisionFilter] = useState<'all' | 'base' | 'revisions'>(() => {
+    const saved = localStorage.getItem('filterRevisionFilter');
+    return (saved as 'all' | 'base' | 'revisions') || 'all';
+  });
+  
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
+    const saved = localStorage.getItem('filterViewMode');
+    return (saved as 'cards' | 'table') || 'cards';
+  });
   
   // Show/hide filters with localStorage persistence
   const [showFilters, setShowFilters] = useState<boolean>(() => {
     const saved = localStorage.getItem('showFilters');
     return saved ? JSON.parse(saved) : true; // Default to visible
   });
+
+  // Save all filter states to localStorage
+  useEffect(() => {
+    localStorage.setItem('filterSearchQuery', searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    localStorage.setItem('filterSelectedSystem', selectedSystem);
+  }, [selectedSystem]);
+
+  useEffect(() => {
+    localStorage.setItem('filterSelectedRegions', JSON.stringify(Array.from(selectedRegions)));
+  }, [selectedRegions]);
+
+  useEffect(() => {
+    localStorage.setItem('filterStatusFilter', statusFilter);
+  }, [statusFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('filterCategoryFilter', categoryFilter);
+  }, [categoryFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('filterReleaseTypeFilter', releaseTypeFilter);
+  }, [releaseTypeFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('filterRevisionFilter', revisionFilter);
+  }, [revisionFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('filterViewMode', viewMode);
+  }, [viewMode]);
 
   // Save filter visibility to localStorage
   useEffect(() => {

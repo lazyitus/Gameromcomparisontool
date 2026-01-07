@@ -3,6 +3,9 @@ export interface ElectronAPI {
   selectRomListDirectory: () => Promise<Array<{ name: string; content: string; path: string }> | null>;
   selectDatFiles: () => Promise<Array<{ name: string; content: string; path: string }> | null>;
   selectRomListFiles: () => Promise<Array<{ name: string; content: string; path: string }> | null>;
+  minimizeWindow: () => Promise<void>;
+  maximizeWindow: () => Promise<void>;
+  closeWindow: () => Promise<void>;
 }
 
 declare global {

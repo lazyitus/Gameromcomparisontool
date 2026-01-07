@@ -16,6 +16,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Select individual ROM list files
   selectRomListFiles: () => ipcRenderer.invoke('select-romlist-files'),
+  
+  // Window controls
+  minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
+  maximizeWindow: () => ipcRenderer.invoke('maximize-window'),
+  closeWindow: () => ipcRenderer.invoke('close-window'),
 });
 
 console.log('✅ electronAPI exposed to window object');

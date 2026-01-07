@@ -4,6 +4,7 @@ import { DatFileUploader, type DatFile } from './components/DatFileUploader';
 import { RomListUploader, type RomList } from './components/RomListUploader';
 import { GameComparison } from './components/GameComparison';
 import { WantList, type WantedGame } from './components/WantList';
+import { TitleBar } from './components/TitleBar';
 import { Card } from './components/ui/card';
 import { Separator } from './components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
@@ -15,6 +16,23 @@ export default function App() {
     console.log('window.electronAPI:', window.electronAPI);
     console.log('Available methods:', window.electronAPI ? Object.keys(window.electronAPI) : 'NOT AVAILABLE');
   }, []);
+
+  // Theme state with localStorage persistence
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('theme');
+    return (saved as 'light' | 'dark') || 'dark';
+  });
+
+  // Apply theme to document
+  useEffect(() => {
+    document.documentElement.classList.remove('light', 'dark');
+    document.documentElement.classList.add(theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
 
   // DAT files with localStorage persistence
   const [datFiles, setDatFiles] = useState<DatFile[]>(() => {
@@ -106,7 +124,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8 px-4 max-w-7xl">
+      {/* Custom Title Bar */}
+      <TitleBar theme={theme} onThemeToggle={toggleTheme} />
+      
+      {/* Main Content - Add top padding for title bar */}
+      <div className="container mx-auto py-8 px-4 max-w-7xl" style={{ paddingTop: 'calc(2rem + 32px)' }}>
         {/* Header */}
         <div className="mb-8 text-center">
           <div className="flex items-center justify-center gap-3 mb-2">
