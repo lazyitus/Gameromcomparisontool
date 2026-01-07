@@ -157,7 +157,7 @@ export default function App() {
             textShadow: '0 0 5px var(--neon-cyan)',
             color: 'var(--neon-cyan)'
           }}>
-            ��� RETRO COLLECTION MANAGER ⚡
+            ⚡ RETRO COLLECTION MANAGER ⚡
           </p>
           <p className="text-sm mt-2 opacity-80">
             Upload DAT files and ROM lists to track your ultimate collection
