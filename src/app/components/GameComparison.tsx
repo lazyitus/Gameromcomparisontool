@@ -724,6 +724,8 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
   // Get unique regions and categories for filters
   const regions = useMemo(() => {
     const regionSet = new Set<string>();
+    let hasNoRegion = false;
+    
     comparison.forEach(match => {
       // Only include regions from the selected system
       if (selectedSystem === 'all' || match.systemName === selectedSystem) {
@@ -732,10 +734,21 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
           if (sanitizedRegion) {
             regionSet.add(sanitizedRegion);
           }
+        } else {
+          // Track if any games have no region
+          hasNoRegion = true;
         }
       }
     });
-    return Array.from(regionSet).sort();
+    
+    const regionsArray = Array.from(regionSet).sort();
+    
+    // Add "No Region" option if there are games without regions
+    if (hasNoRegion) {
+      regionsArray.push('(No Region)');
+    }
+    
+    return regionsArray;
   }, [comparison, selectedSystem]);
 
   const categories = useMemo(() => {
@@ -784,7 +797,18 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
       // Region filter
       if (selectedRegions.size > 0) {
         const sanitizedGameRegion = sanitizeRegion(match.game.region);
-        if (!sanitizedGameRegion || !selectedRegions.has(sanitizedGameRegion)) return false;
+        
+        // Handle "(No Region)" filter
+        if (selectedRegions.has('(No Region)')) {
+          // If "(No Region)" is selected, show games with no region OR other selected regions
+          const hasNoRegion = !match.game.region || !sanitizedGameRegion;
+          const hasSelectedRegion = sanitizedGameRegion && selectedRegions.has(sanitizedGameRegion);
+          
+          if (!hasNoRegion && !hasSelectedRegion) return false;
+        } else {
+          // Normal region filtering
+          if (!sanitizedGameRegion || !selectedRegions.has(sanitizedGameRegion)) return false;
+        }
       }
 
       // Category filter
@@ -1141,6 +1165,26 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
                   {regions.length === 0 && (
                     <div className="text-xs text-muted-foreground p-2 mb-2 bg-yellow-500/10 border border-yellow-500/50 rounded">
                       ⚠️ No regions detected for this system.
+                    </div>
+                  )}
+                  {regions.length > 0 && (
+                    <div className="flex gap-1 mb-2 pb-2 border-b border-border">
+                      <Button
+                        onClick={() => setSelectedRegions(new Set(regions))}
+                        className="flex-1 h-6 text-xs"
+                        variant="outline"
+                        size="sm"
+                      >
+                        Select All
+                      </Button>
+                      <Button
+                        onClick={() => setSelectedRegions(new Set())}
+                        className="flex-1 h-6 text-xs"
+                        variant="outline"
+                        size="sm"
+                      >
+                        Select None
+                      </Button>
                     </div>
                   )}
                   {regions.map(region => (
