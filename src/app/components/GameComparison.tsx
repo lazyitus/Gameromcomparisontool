@@ -295,24 +295,17 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     const processedRomsJson = localStorage.getItem('processedRomLists');
     const processedRoms = processedRomsJson ? JSON.parse(processedRomsJson) : [];
     
-    // Create identifiers for current data
-    const currentDatIds = datFiles.map(d => `${d.system}-${d.games.length}`);
-    const currentRomIds = romLists.map(r => r.systemName);
+    // Create BETTER identifiers for current data using filename + system + game count
+    const currentDatIds = datFiles.map(d => `${d.name}-${d.system}-${d.games.length}`);
+    const currentRomIds = romLists.map(r => `${r.systemName}-${r.roms.length}`);
     
     // Find NEW DAT files (not in processed list)
     const newDats = datFiles.filter((d, i) => !processedDats.includes(currentDatIds[i]));
     
     // Find ROM lists for systems that weren't processed before OR that have changed
     const newOrChangedRomSystems = romLists.filter(r => {
-      const wasProcessed = processedRoms.includes(r.systemName);
-      if (!wasProcessed) return true;
-      
-      // Check if this ROM list changed (different ROM count)
-      const oldRomListJson = localStorage.getItem(`romList-${r.systemName}`);
-      if (!oldRomListJson) return true;
-      
-      const oldRomList = JSON.parse(oldRomListJson);
-      return oldRomList.roms.length !== r.roms.length;
+      const currentId = `${r.systemName}-${r.roms.length}`;
+      return !processedRoms.includes(currentId);
     }).map(r => r.systemName);
     
     // If we have new DAT files or changed ROM lists, mark as needing matching
@@ -326,11 +319,29 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
       }));
     }
     
-    // Store current ROM lists for change detection
+    // Store current ROM lists for change detection (no longer needed, but keep for backward compat)
     romLists.forEach(r => {
       localStorage.setItem(`romList-${r.systemName}`, JSON.stringify({ roms: r.roms }));
     });
   }, [datFiles, romLists]);
+
+  // Manual re-match function - clears all tracking and forces complete re-match
+  const triggerManualRematch = () => {
+    // Clear all tracking data
+    localStorage.removeItem('processedDats');
+    localStorage.removeItem('processedRomLists');
+    localStorage.removeItem('systemsToMatch');
+    localStorage.removeItem('comparisonResults');
+    
+    // Clear ROM list cache
+    romLists.forEach(r => {
+      localStorage.removeItem(`romList-${r.systemName}`);
+    });
+    
+    // Reset state
+    setComparisonResults([]);
+    setMatchingState('idle');
+  };
 
   // Start matching process - INCREMENTAL VERSION
   const startMatching = async () => {
@@ -735,6 +746,23 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Collection</p>
           <p className="text-2xl font-bold stat-glow-pink">{stats.percentage}%</p>
         </Card>
+      </div>
+
+      {/* Re-Match Button */}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={triggerManualRematch}
+          className="flex items-center gap-1 h-7 px-3 text-xs"
+          style={{
+            borderColor: 'var(--neon-orange)',
+            color: 'var(--neon-orange)'
+          }}
+        >
+          <Gamepad2 className="size-3" />
+          Re-Match All
+        </Button>
       </div>
 
       {/* Filters */}
