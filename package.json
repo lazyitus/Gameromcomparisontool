@@ -111,6 +111,9 @@
       "dist/**/*",
       "dist-electron/**/*"
     ],
+    "extraMetadata": {
+      "main": "dist-electron/main.cjs"
+    },
     "mac": {
       "category": "public.app-category.utilities",
       "target": [
