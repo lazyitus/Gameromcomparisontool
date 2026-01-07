@@ -86,7 +86,9 @@
 /* Neon tab styling */
 [data-slot="tabs-trigger"][data-state="active"] {
   border-color: var(--neon-cyan) !important;
-  box-shadow: 0 0 15px var(--neon-cyan) !important;
+  box-shadow: 
+    0 0 10px var(--neon-cyan),
+    inset 0 0 10px rgba(0, 255, 255, 0.2) !important;
   text-shadow: 0 0 10px var(--neon-cyan) !important;
   color: var(--neon-cyan) !important;
   background-color: rgba(0, 255, 255, 0.1) !important;
