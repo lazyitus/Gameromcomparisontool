@@ -437,15 +437,22 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     }
     
     // Find NEW DAT files (not in processed list)
-    const newDats = datFiles.filter((d, i) => !processedDats.includes(currentDatIds[i]));
+    // CRITICAL: Only detect "new" DATs if we have a baseline (processedDats is not empty)
+    // If processedDats is empty, this is first-time setup and we shouldn't track "new" systems
+    const newDats = processedDats.length > 0 
+      ? datFiles.filter((d, i) => !processedDats.includes(currentDatIds[i]))
+      : [];
     
     console.log('🆕 newDats:', newDats.map(d => d.system));
     
     // Find ROM lists for systems that weren't processed before OR that have changed
-    const newOrChangedRomSystems = romLists.filter(r => {
-      const currentId = `${r.systemName}-${r.roms.length}`;
-      return !processedRoms.includes(currentId);
-    }).map(r => r.systemName);
+    // CRITICAL: Only detect "changed" ROMs if we have a baseline (processedRoms is not empty)
+    const newOrChangedRomSystems = processedRoms.length > 0
+      ? romLists.filter(r => {
+          const currentId = `${r.systemName}-${r.roms.length}`;
+          return !processedRoms.includes(currentId);
+        }).map(r => r.systemName)
+      : [];
     
     console.log('🔄 newOrChangedRomSystems:', newOrChangedRomSystems);
     
