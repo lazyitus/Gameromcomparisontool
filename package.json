@@ -12,7 +12,13 @@
     "build:renderer": "vite build",
     "build:electron": "vite build --config vite.electron.config.ts",
     "electron:dev": "node scripts/dev.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "verify": "node scripts/verify-build.js",
+    "check": "node scripts/production-check.js",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -98,31 +104,42 @@
     "appId": "com.romarcade.manager",
     "productName": "ROM Arcade Manager",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "dist/**/*",
       "dist-electron/**/*"
     ],
+    "icon": "build/icon.svg",
     "mac": {
       "category": "public.app-category.utilities",
       "target": [
         "dmg",
         "zip"
-      ]
+      ],
+      "icon": "build/icon.svg"
     },
     "win": {
       "target": [
         "nsis",
         "portable"
-      ]
+      ],
+      "icon": "build/icon.svg"
     },
     "linux": {
       "target": [
         "AppImage",
         "deb"
       ],
-      "category": "Utility"
+      "category": "Utility",
+      "icon": "build/icon.svg"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     }
   }
 }
