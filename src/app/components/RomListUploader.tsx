@@ -1,4 +1,4 @@
-import { FolderOpen, FileText, ChevronDown, ChevronUp, X, List } from 'lucide-react';
+import { FolderOpen, FileText, ChevronDown, ChevronUp, X, List, Edit } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { useState } from 'react';
@@ -434,6 +434,7 @@ export function RomListUploader({ onRomsLoaded, romLists, datFiles }: RomListUpl
   const [error, setError] = useState<string>('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, fileName: '' });
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [pendingAssignments, setPendingAssignments] = useState<Array<{
     filename: string;
     content: string;
@@ -570,6 +571,13 @@ export function RomListUploader({ onRomsLoaded, romLists, datFiles }: RomListUpl
     onRomsLoaded(updated);
   };
 
+  const updateRomListSystem = (index: number, newSystemName: string) => {
+    const updated = [...romLists];
+    updated[index] = { ...updated[index], systemName: newSystemName };
+    onRomsLoaded(updated);
+    setEditingIndex(null);
+  };
+
   const totalRoms = romLists.reduce((sum, list) => sum + list.roms.length, 0);
 
   return (
@@ -701,21 +709,65 @@ export function RomListUploader({ onRomsLoaded, romLists, datFiles }: RomListUpl
                     className="flex items-center justify-between p-3 bg-background/50 rounded-md border border-primary/20"
                   >
                     <div className="flex-1">
-                      <div className="font-medium stat-glow-pink">{list.systemName}</div>
-                      <div className="text-sm opacity-70">{list.name}</div>
+                      {editingIndex === index ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <Label className="text-xs mb-1 block">Reassign to System</Label>
+                            <Select
+                              value={list.systemName}
+                              onValueChange={(value) => updateRomListSystem(index, value)}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {datFiles.map((datFile, i) => (
+                                  <SelectItem key={i} value={datFile.system}>
+                                    {datFile.system}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingIndex(null)}
+                            className="mt-5"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="font-medium stat-glow-pink">{list.systemName}</div>
+                          <div className="text-sm opacity-70">{list.name}</div>
+                        </>
+                      )}
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Badge variant="secondary">
-                        {list.roms.length.toLocaleString()} ROMs
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeRomList(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {editingIndex !== index && (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">
+                          {list.roms.length.toLocaleString()} ROMs
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingIndex(index)}
+                          title="Reassign to different system"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeRomList(index)}
+                          title="Remove ROM list"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
