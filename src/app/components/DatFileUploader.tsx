@@ -176,6 +176,9 @@ export function DatFileUploader({ onDatFilesLoaded, datFiles }: DatFileUploaderP
         const { name, content } = fileData[i];
         setUploadProgress({ current: i + 1, total: totalFiles, fileName: name });
         
+        // Allow UI to update by yielding to the event loop
+        await new Promise(resolve => setTimeout(resolve, 0));
+        
         const parsed = parseDatFile(content, name);
         if (parsed && parsed.games.length > 0) {
           parsedFiles.push(parsed);
@@ -221,6 +224,9 @@ export function DatFileUploader({ onDatFilesLoaded, datFiles }: DatFileUploaderP
       for (let i = 0; i < fileData.length; i++) {
         const { name, content } = fileData[i];
         setUploadProgress({ current: i + 1, total: totalFiles, fileName: name });
+        
+        // Allow UI to update by yielding to the event loop
+        await new Promise(resolve => setTimeout(resolve, 0));
         
         const parsed = parseDatFile(content, name);
         if (parsed && parsed.games.length > 0) {

@@ -469,17 +469,27 @@ export function RomListUploader({ onRomsLoaded, romLists, datFiles }: RomListUpl
         return; // User canceled
       }
 
+      const totalFiles = fileData.length;
+      
       // If we have DAT files, try to auto-match based on filename
       if (datFiles.length > 0) {
-        const assignments = fileData.map(({ name, content }) => {
+        const assignments = [];
+        
+        for (let i = 0; i < fileData.length; i++) {
+          const { name, content } = fileData[i];
+          setUploadProgress({ current: i + 1, total: totalFiles, fileName: name });
+          
+          // Allow UI to update by yielding to the event loop
+          await new Promise(resolve => setTimeout(resolve, 0));
+          
           const matchedSystem = findMatchingSystem(name, datFiles);
           
-          return {
+          assignments.push({
             filename: name,
             content,
             systemName: matchedSystem,
-          };
-        });
+          });
+        }
 
         setPendingAssignments(assignments);
       } else {
@@ -489,6 +499,7 @@ export function RomListUploader({ onRomsLoaded, romLists, datFiles }: RomListUpl
       setError(err instanceof Error ? err.message : 'Failed to load ROM list files');
     } finally {
       setIsLoading(false);
+      setUploadProgress({ current: 0, total: 0, fileName: '' });
     }
   };
 
@@ -609,6 +620,16 @@ export function RomListUploader({ onRomsLoaded, romLists, datFiles }: RomListUpl
         {datFiles.length === 0 && (
           <div className="p-3 bg-yellow-500/10 border border-yellow-500 rounded-md">
             <p className="text-sm text-yellow-400">⚠️ Load DAT files first to assign ROM lists to systems</p>
+          </div>
+        )}
+
+        {isLoading && uploadProgress.total > 0 && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="stat-glow-cyan">Processing: {uploadProgress.fileName}</span>
+              <span className="stat-glow-pink">{uploadProgress.current} / {uploadProgress.total}</span>
+            </div>
+            <Progress value={(uploadProgress.current / uploadProgress.total) * 100} />
           </div>
         )}
 
