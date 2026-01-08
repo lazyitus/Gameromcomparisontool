@@ -398,13 +398,21 @@ const findMatchingSystem = (filename: string, datFiles: DatFile[]): string | nul
   const filenameLower = filename.toLowerCase().replace('.txt', '');
   const filenameNormalized = normalizeSystemName(filename);
   
+  console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`🔍 MATCHING: "${filename}"`);
+  console.log(`   Raw lower: "${filenameLower}"`);
+  console.log(`   Normalized: "${filenameNormalized}"`);
+  console.log(`   Checking against ${datFiles.length} DAT files...`);
+  
   // Require minimum length to prevent spurious matches
   if (filenameNormalized.length < 2) {
-    console.log(`❌ Filename too short after normalization: "${filename}" -> "${filenameNormalized}"`);
+    console.log(`❌ REJECTED: Filename too short after normalization`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
     return null;
   }
   
   let bestMatch: { datFile: DatFile; score: number; reason: string } | null = null;
+  let allScores: Array<{ system: string; score: number; reason: string }> = [];
   
   for (const datFile of datFiles) {
     const systemLower = datFile.system.toLowerCase();
@@ -417,14 +425,19 @@ const findMatchingSystem = (filename: string, datFiles: DatFile[]): string | nul
       continue;
     }
     
+    console.log(`\n  📋 Checking DAT: "${datFile.system}"`);
+    console.log(`     Normalized: "${systemNormalized}"`);
+    
     // 1. EXACT MATCH - Perfect match (case-insensitive, normalized)
     if (filenameLower === systemLower) {
-      console.log(`🎯 Perfect exact match: "${filename}" to "${datFile.system}"`);
+      console.log(`     ✅ PERFECT EXACT MATCH!`);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
       return datFile.system;
     }
     
     if (filenameNormalized === systemNormalized) {
-      console.log(`🎯 Perfect normalized match: "${filename}" to "${datFile.system}"`);
+      console.log(`     ✅ PERFECT NORMALIZED MATCH!`);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
       return datFile.system;
     }
     
@@ -443,13 +456,14 @@ const findMatchingSystem = (filename: string, datFiles: DatFile[]): string | nul
           score = 1.0;
           reason = `Exact alias match via "${canonical}"`;
           exactAliasMatch = true;
+          console.log(`     ✅ EXACT ALIAS MATCH via "${canonical}" (score: 1.0)`);
           break;
         }
       }
     }
     
     if (exactAliasMatch && score === 1.0) {
-      console.log(`🎯 ${reason}: "${filename}" to "${datFile.system}"`);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
       return datFile.system;
     }
     
@@ -462,25 +476,38 @@ const findMatchingSystem = (filename: string, datFiles: DatFile[]): string | nul
       // Filename contains system name (system is more generic)
       if (filenameNormalized.includes(systemNormalized)) {
         const ratio = systemNormalized.length / filenameNormalized.length;
+        console.log(`     ⚡ Filename contains system (ratio: ${ratio.toFixed(2)})`);
         // Only score high if system name is substantial part of filename
         if (ratio >= 0.5) {
           score = 0.90;
           reason = 'Filename contains system name';
+          console.log(`     ✅ SUBSTRING MATCH (score: 0.90)`);
+        } else {
+          console.log(`     ⚠️  Ratio too low (< 0.5), skipping`);
         }
       } 
       // System name contains filename (filename is more generic - less ideal)
       else if (systemNormalized.includes(filenameNormalized)) {
         const ratio = filenameNormalized.length / systemNormalized.length;
+        console.log(`     ⚡ System contains filename (ratio: ${ratio.toFixed(2)})`);
         // Only score high if filename is substantial part of system name
         if (ratio >= 0.5) {
           score = 0.85;
           reason = 'System contains filename';
+          console.log(`     ✅ SUBSTRING MATCH (score: 0.85)`);
+        } else {
+          console.log(`     ⚠️  Ratio too low (< 0.5), skipping`);
         }
+      } else {
+        console.log(`     ❌ No substring match`);
       }
+    } else {
+      console.log(`     ❌ Strings too short for substring matching`);
     }
     
     // 4. PARTIAL ALIAS MATCH - Check if both match the same alias group
     if (score < 0.85) {
+      console.log(`     🔍 Checking alias groups...`);
       for (const [canonical, aliases] of Object.entries(SYSTEM_ALIASES)) {
         const canonicalNormalized = normalizeSystemName(canonical);
         
@@ -502,10 +529,22 @@ const findMatchingSystem = (filename: string, datFiles: DatFile[]): string | nul
           if (filenameMatches) {
             score = 0.80;
             reason = `Both match alias group "${canonical}"`;
+            console.log(`     ✅ ALIAS GROUP MATCH: "${canonical}" (score: 0.80)`);
             break;
           }
         }
       }
+      if (score < 0.85) {
+        console.log(`     ❌ No alias group matches`);
+      }
+    }
+    
+    // Track all scores for debugging
+    if (score > 0) {
+      allScores.push({ system: datFile.system, score, reason });
+      console.log(`     📊 Final score: ${score.toFixed(2)} - ${reason}`);
+    } else {
+      console.log(`     📊 Final score: 0.00 - No match`);
     }
     
     // Track best match - prefer longer/more specific names when scores are close
@@ -521,13 +560,28 @@ const findMatchingSystem = (filename: string, datFiles: DatFile[]): string | nul
     }
   }
   
+  console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`📊 RESULTS FOR "${filename}":`);
+  console.log(`   Total candidates: ${allScores.length}`);
+  if (allScores.length > 0) {
+    console.log(`   All scores:`);
+    allScores
+      .sort((a, b) => b.score - a.score)
+      .forEach(({ system, score, reason }) => {
+        console.log(`     ${score.toFixed(2)} - ${system} (${reason})`);
+      });
+  }
+  
   // Return best match if score is above threshold
   if (bestMatch && bestMatch.score >= 0.80) {
-    console.log(`🎯 Matched "${filename}" to "${bestMatch.datFile.system}" (score: ${bestMatch.score.toFixed(2)}, reason: ${bestMatch.reason})`);
+    console.log(`\n   ✅ WINNER: "${bestMatch.datFile.system}" (score: ${bestMatch.score.toFixed(2)})`);
+    console.log(`   Reason: ${bestMatch.reason}`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
     return bestMatch.datFile.system;
   }
   
-  console.log(`❌ No match found for "${filename}" (best: ${bestMatch?.datFile.system || 'none'}, score: ${bestMatch?.score.toFixed(2) || 0})`);
+  console.log(`\n   ❌ NO MATCH FOUND (best score: ${bestMatch?.score.toFixed(2) || '0.00'})`);
+  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
   return null;
 };
 
