@@ -393,20 +393,40 @@ const normalizeSystemName = (name: string): string => {
     .trim();
 };
 
+// Extract system name from common filename patterns
+// Handles: "Manufacturer - System Name.txt" → "System Name"
+const extractSystemFromFilename = (filename: string): string => {
+  const cleaned = filename.replace(/\.txt$/i, '').trim();
+  
+  // Check for "Manufacturer - System" pattern
+  const dashMatch = cleaned.match(/^[^-]+-(.+)$/);
+  if (dashMatch) {
+    return dashMatch[1].trim();
+  }
+  
+  return cleaned;
+};
+
 // Find matching system using comprehensive alias matching
 const findMatchingSystem = (filename: string, datFiles: DatFile[]): string | null => {
   const filenameLower = filename.toLowerCase().replace('.txt', '');
   const filenameNormalized = normalizeSystemName(filename);
   
+  // CRITICAL: Extract the system name part from "Manufacturer - System" pattern
+  const extractedSystem = extractSystemFromFilename(filename);
+  const extractedNormalized = normalizeSystemName(extractedSystem);
+  
   console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
   console.log(`🔍 MATCHING: "${filename}"`);
   console.log(`   Raw lower: "${filenameLower}"`);
   console.log(`   Normalized: "${filenameNormalized}"`);
+  console.log(`   Extracted system: "${extractedSystem}"`);
+  console.log(`   Extracted normalized: "${extractedNormalized}"`);
   console.log(`   Checking against ${datFiles.length} DAT files...`);
   
   // Require minimum length to prevent spurious matches
-  if (filenameNormalized.length < 2) {
-    console.log(`❌ REJECTED: Filename too short after normalization`);
+  if (extractedNormalized.length < 2) {
+    console.log(`❌ REJECTED: Extracted system too short after normalization`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
     return null;
   }
@@ -417,18 +437,30 @@ const findMatchingSystem = (filename: string, datFiles: DatFile[]): string | nul
   for (const datFile of datFiles) {
     const systemLower = datFile.system.toLowerCase();
     const systemNormalized = normalizeSystemName(datFile.system);
+    
+    // Also extract system from DAT name if it follows the same pattern
+    const datExtracted = extractSystemFromFilename(datFile.system);
+    const datExtractedNormalized = normalizeSystemName(datExtracted);
+    
     let score = 0;
     let reason = '';
     
     // Skip if system name normalizes to something too short
-    if (systemNormalized.length < 2) {
+    if (systemNormalized.length < 2 && datExtractedNormalized.length < 2) {
       continue;
     }
     
     console.log(`\n  📋 Checking DAT: "${datFile.system}"`);
     console.log(`     Normalized: "${systemNormalized}"`);
+    console.log(`     Extracted: "${datExtracted}" → "${datExtractedNormalized}"`);
     
-    // 1. EXACT MATCH - Perfect match (case-insensitive, normalized)
+    // 1. EXACT MATCH - Perfect match using extracted system names
+    if (extractedNormalized === datExtractedNormalized) {
+      console.log(`     ✅ PERFECT EXTRACTED MATCH!`);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+      return datFile.system;
+    }
+    
     if (filenameLower === systemLower) {
       console.log(`     ✅ PERFECT EXACT MATCH!`);
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
@@ -441,18 +473,22 @@ const findMatchingSystem = (filename: string, datFiles: DatFile[]): string | nul
       return datFile.system;
     }
     
-    // 2. EXACT ALIAS MATCH - Check if filename exactly matches a known alias
+    // 2. EXACT ALIAS MATCH - Check using extracted system name
     let exactAliasMatch = false;
     for (const [canonical, aliases] of Object.entries(SYSTEM_ALIASES)) {
       const canonicalNormalized = normalizeSystemName(canonical);
       
-      // Check if filename exactly matches canonical or any alias
-      if (filenameNormalized === canonicalNormalized || 
-          aliases.some(alias => filenameNormalized === normalizeSystemName(alias))) {
+      // Check if EXTRACTED filename exactly matches canonical or any alias
+      if (extractedNormalized === canonicalNormalized || 
+          aliases.some(alias => extractedNormalized === normalizeSystemName(alias))) {
         
         // Check if this DAT system also matches the same canonical/aliases
-        if (systemNormalized === canonicalNormalized ||
-            aliases.some(alias => systemNormalized === normalizeSystemName(alias))) {
+        if (datExtractedNormalized === canonicalNormalized ||
+            systemNormalized === canonicalNormalized ||
+            aliases.some(alias => {
+              const aliasNorm = normalizeSystemName(alias);
+              return datExtractedNormalized === aliasNorm || systemNormalized === aliasNorm;
+            })) {
           score = 1.0;
           reason = `Exact alias match via "${canonical}"`;
           exactAliasMatch = true;
@@ -467,45 +503,43 @@ const findMatchingSystem = (filename: string, datFiles: DatFile[]): string | nul
       return datFile.system;
     }
     
-    // 3. SUBSTRING MATCH - Only if one fully contains the other AND meets length requirements
-    const minLengthForSubstring = 4; // Require at least 4 chars for substring matching
+    // 3. SUBSTRING MATCH - Use extracted system names
+    const minLengthForSubstring = 3; // Lowered from 4
     
-    if (filenameNormalized.length >= minLengthForSubstring && 
-        systemNormalized.length >= minLengthForSubstring) {
+    if (extractedNormalized.length >= minLengthForSubstring && 
+        datExtractedNormalized.length >= minLengthForSubstring) {
       
-      // Filename contains system name (system is more generic)
-      if (filenameNormalized.includes(systemNormalized)) {
-        const ratio = systemNormalized.length / filenameNormalized.length;
-        console.log(`     ⚡ Filename contains system (ratio: ${ratio.toFixed(2)})`);
-        // Only score high if system name is substantial part of filename
-        if (ratio >= 0.5) {
+      // Extracted filename contains DAT system
+      if (extractedNormalized.includes(datExtractedNormalized)) {
+        const ratio = datExtractedNormalized.length / extractedNormalized.length;
+        console.log(`     ⚡ Extracted filename contains DAT system (ratio: ${ratio.toFixed(2)})`);
+        if (ratio >= 0.4) { // Lowered from 0.5
           score = 0.90;
-          reason = 'Filename contains system name';
+          reason = 'Extracted filename contains system';
           console.log(`     ✅ SUBSTRING MATCH (score: 0.90)`);
         } else {
-          console.log(`     ⚠️  Ratio too low (< 0.5), skipping`);
+          console.log(`     ⚠️  Ratio too low (< 0.4), skipping`);
         }
       } 
-      // System name contains filename (filename is more generic - less ideal)
-      else if (systemNormalized.includes(filenameNormalized)) {
-        const ratio = filenameNormalized.length / systemNormalized.length;
-        console.log(`     ⚡ System contains filename (ratio: ${ratio.toFixed(2)})`);
-        // Only score high if filename is substantial part of system name
-        if (ratio >= 0.5) {
+      // DAT system contains extracted filename
+      else if (datExtractedNormalized.includes(extractedNormalized)) {
+        const ratio = extractedNormalized.length / datExtractedNormalized.length;
+        console.log(`     ⚡ DAT system contains extracted filename (ratio: ${ratio.toFixed(2)})`);
+        if (ratio >= 0.4) { // Lowered from 0.5
           score = 0.85;
-          reason = 'System contains filename';
+          reason = 'DAT system contains extracted filename';
           console.log(`     ✅ SUBSTRING MATCH (score: 0.85)`);
         } else {
-          console.log(`     ⚠️  Ratio too low (< 0.5), skipping`);
+          console.log(`     ⚠️  Ratio too low (< 0.4), skipping`);
         }
       } else {
         console.log(`     ❌ No substring match`);
       }
     } else {
-      console.log(`     ❌ Strings too short for substring matching`);
+      console.log(`     ❌ Strings too short for substring matching (need ${minLengthForSubstring}+ chars)`);
     }
     
-    // 4. PARTIAL ALIAS MATCH - Check if both match the same alias group
+    // 4. PARTIAL ALIAS MATCH - Use extracted names
     if (score < 0.85) {
       console.log(`     🔍 Checking alias groups...`);
       for (const [canonical, aliases] of Object.entries(SYSTEM_ALIASES)) {
@@ -513,18 +547,22 @@ const findMatchingSystem = (filename: string, datFiles: DatFile[]): string | nul
         
         // Check if DAT system matches this alias group
         const datMatches = 
+          datExtractedNormalized === canonicalNormalized ||
           systemNormalized === canonicalNormalized ||
-          aliases.some(alias => systemNormalized === normalizeSystemName(alias)) ||
-          (systemNormalized.length >= 4 && canonicalNormalized.length >= 4 && 
-           systemNormalized.includes(canonicalNormalized));
+          aliases.some(alias => {
+            const aliasNorm = normalizeSystemName(alias);
+            return datExtractedNormalized === aliasNorm || systemNormalized === aliasNorm;
+          }) ||
+          (datExtractedNormalized.length >= 3 && canonicalNormalized.length >= 3 && 
+           datExtractedNormalized.includes(canonicalNormalized));
         
         if (datMatches) {
-          // Check if filename also matches this alias group
+          // Check if extracted filename also matches this alias group
           const filenameMatches =
-            filenameNormalized === canonicalNormalized ||
-            aliases.some(alias => filenameNormalized === normalizeSystemName(alias)) ||
-            (filenameNormalized.length >= 4 && canonicalNormalized.length >= 4 && 
-             filenameNormalized.includes(canonicalNormalized));
+            extractedNormalized === canonicalNormalized ||
+            aliases.some(alias => extractedNormalized === normalizeSystemName(alias)) ||
+            (extractedNormalized.length >= 3 && canonicalNormalized.length >= 3 && 
+             extractedNormalized.includes(canonicalNormalized));
           
           if (filenameMatches) {
             score = 0.80;
@@ -567,6 +605,7 @@ const findMatchingSystem = (filename: string, datFiles: DatFile[]): string | nul
     console.log(`   All scores:`);
     allScores
       .sort((a, b) => b.score - a.score)
+      .slice(0, 10) // Show top 10 matches only
       .forEach(({ system, score, reason }) => {
         console.log(`     ${score.toFixed(2)} - ${system} (${reason})`);
       });
@@ -581,6 +620,9 @@ const findMatchingSystem = (filename: string, datFiles: DatFile[]): string | nul
   }
   
   console.log(`\n   ❌ NO MATCH FOUND (best score: ${bestMatch?.score.toFixed(2) || '0.00'})`);
+  if (bestMatch) {
+    console.log(`   Best candidate: "${bestMatch.datFile.system}"`);
+  }
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
   return null;
 };
