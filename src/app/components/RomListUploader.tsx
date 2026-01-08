@@ -469,14 +469,27 @@ export function RomListUploader({ onRomsLoaded, romLists, datFiles }: RomListUpl
         return; // User canceled
       }
 
-      const totalFiles = fileData.length;
-      
       // If we have DAT files, try to auto-match based on filename
       if (datFiles.length > 0) {
+        // Filter out already-loaded ROM lists BEFORE processing
+        const existingKeys = new Set(romLists.map(list => `${list.systemName}-${list.name}`));
+        const filesToProcess = fileData.filter(({ name }) => {
+          // Check if this file is already loaded with any system
+          const isAlreadyLoaded = Array.from(existingKeys).some(key => key.endsWith(`-${name}`));
+          return !isAlreadyLoaded;
+        });
+        
+        if (filesToProcess.length === 0) {
+          setError('All ROM list files in this directory are already loaded');
+          setIsLoading(false);
+          return;
+        }
+
+        const totalFiles = filesToProcess.length;
         const assignments = [];
         
-        for (let i = 0; i < fileData.length; i++) {
-          const { name, content } = fileData[i];
+        for (let i = 0; i < filesToProcess.length; i++) {
+          const { name, content } = filesToProcess[i];
           setUploadProgress({ current: i + 1, total: totalFiles, fileName: name });
           
           // Allow UI to update by yielding to the event loop

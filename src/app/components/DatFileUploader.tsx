@@ -169,11 +169,21 @@ export function DatFileUploader({ onDatFilesLoaded, datFiles }: DatFileUploaderP
         return; // User canceled
       }
 
-      const parsedFiles: DatFile[] = [];
-      const totalFiles = fileData.length;
+      // Filter out already-loaded files BEFORE parsing
+      const existingNames = new Set(datFiles.map(f => f.name));
+      const filesToProcess = fileData.filter(({ name }) => !existingNames.has(name));
+      
+      if (filesToProcess.length === 0) {
+        setError('All DAT files in this directory are already loaded');
+        setIsLoading(false);
+        return;
+      }
 
-      for (let i = 0; i < fileData.length; i++) {
-        const { name, content } = fileData[i];
+      const parsedFiles: DatFile[] = [];
+      const totalFiles = filesToProcess.length;
+
+      for (let i = 0; i < filesToProcess.length; i++) {
+        const { name, content } = filesToProcess[i];
         setUploadProgress({ current: i + 1, total: totalFiles, fileName: name });
         
         // Allow UI to update by yielding to the event loop
@@ -188,10 +198,7 @@ export function DatFileUploader({ onDatFilesLoaded, datFiles }: DatFileUploaderP
       if (parsedFiles.length === 0) {
         setError('No valid DAT files found in directory');
       } else {
-        // Append to existing DAT files instead of replacing
-        const existingNames = new Set(datFiles.map(f => f.name));
-        const newFiles = parsedFiles.filter(f => !existingNames.has(f.name));
-        onDatFilesLoaded([...datFiles, ...newFiles]);
+        onDatFilesLoaded([...datFiles, ...parsedFiles]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load DAT files');
