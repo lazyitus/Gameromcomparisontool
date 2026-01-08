@@ -400,8 +400,18 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     console.log('📋 currentDatIds:', currentDatIds);
     console.log('📋 currentRomIds:', currentRomIds);
     
-    // Get current system names
-    const currentSystems = new Set(datFiles.map(d => d.system));
+    // Get current system names from BOTH DAT files and ROM lists
+    const currentDatSystems = new Set(datFiles.map(d => d.system));
+    const currentRomSystems = new Set(romLists.map(r => r.systemName));
+    
+    // A system should only be considered "current" if it has BOTH a DAT and a ROM list
+    const currentSystems = new Set(
+      Array.from(currentDatSystems).filter(sys => currentRomSystems.has(sys))
+    );
+    
+    console.log('🎮 Current DAT systems:', Array.from(currentDatSystems));
+    console.log('📁 Current ROM systems:', Array.from(currentRomSystems));
+    console.log('✅ Systems with BOTH DAT+ROM:', Array.from(currentSystems));
     
     // DELETION DETECTION: Check if any systems were removed
     // Check BOTH processedDats AND comparisonResults for previously existing systems
