@@ -569,8 +569,13 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     let totalGames = 0;
     let processedGames = 0;
 
-    // Calculate total games for progress (only for systems that need matching)
-    datFiles.forEach(datFile => {
+    // CRITICAL FIX: Only process DAT files that have a corresponding ROM list
+    const datFilesWithRoms = datFiles.filter(datFile => 
+      romLists.some(romList => romList.systemName === datFile.system)
+    );
+
+    // Calculate total games for progress (only for systems that need matching AND have ROM lists)
+    datFilesWithRoms.forEach(datFile => {
       if (isFirstTimeMatch || systemsNeedingMatch.has(datFile.system)) {
         totalGames += datFile.games.length;
       }
@@ -584,13 +589,13 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     );
 
     // Process each system ONE AT A TIME with delays to allow UI updates
-    for (const datFile of datFiles) {
+    for (const datFile of datFilesWithRoms) {
       // Skip systems that don't need matching
       if (!isFirstTimeMatch && !systemsNeedingMatch.has(datFile.system)) {
         continue;
       }
       
-      // Find the ROM list for this system
+      // Find the ROM list for this system (guaranteed to exist due to filter above)
       const romList = romLists.find(list => list.systemName === datFile.system);
       const romFiles = romList ? romList.roms : [];
 
