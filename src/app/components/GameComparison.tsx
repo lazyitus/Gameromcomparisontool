@@ -278,23 +278,6 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
   useEffect(() => {
     localStorage.setItem('showFilters', JSON.stringify(showFilters));
   }, [showFilters]);
-
-  // Auto-reset selectedSystem if the currently selected system no longer exists
-  useEffect(() => {
-    if (selectedSystem !== 'all') {
-      // Get current available systems from comparison results
-      const availableSystems = new Set<string>();
-      comparison.forEach(match => {
-        availableSystems.add(match.systemName);
-      });
-      
-      // If the selected system is no longer available, reset to 'all'
-      if (!availableSystems.has(selectedSystem)) {
-        console.log(`🔄 Selected system "${selectedSystem}" no longer exists. Resetting to "all"`);
-        setSelectedSystem('all');
-      }
-    }
-  }, [comparison, selectedSystem]);
   
   // Persist matching state and results
   const [matchingState, setMatchingState] = useState<'idle' | 'matching' | 'complete'>(() => {
@@ -308,6 +291,23 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     const saved = localStorage.getItem('comparisonResults');
     return saved ? JSON.parse(saved) : [];
   });
+
+  // Auto-reset selectedSystem if the currently selected system no longer exists
+  useEffect(() => {
+    if (selectedSystem !== 'all') {
+      // Get current available systems from comparison results
+      const availableSystems = new Set<string>();
+      comparisonResults.forEach(match => {
+        availableSystems.add(match.systemName);
+      });
+      
+      // If the selected system is no longer available, reset to 'all'
+      if (!availableSystems.has(selectedSystem)) {
+        console.log(`🔄 Selected system "${selectedSystem}" no longer exists. Resetting to "all"`);
+        setSelectedSystem('all');
+      }
+    }
+  }, [comparisonResults, selectedSystem]);
 
   // Save matching state to localStorage
   useEffect(() => {
