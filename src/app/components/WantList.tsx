@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Trash2, Package } from 'lucide-react';
+import { Trash2, Package, ChevronLeft } from 'lucide-react';
 import { getSystemIcon } from './SystemIcons';
 
 export interface WantedGame {
@@ -20,6 +20,8 @@ interface WantListProps {
 }
 
 export function WantList({ wantedGames, onRemoveGame }: WantListProps) {
+  const [selectedSystem, setSelectedSystem] = useState<string | null>(null);
+
   // Group games by system
   const gamesBySystem = useMemo(() => {
     const grouped: Record<string, WantedGame[]> = {};
@@ -51,91 +53,141 @@ export function WantList({ wantedGames, onRemoveGame }: WantListProps) {
     );
   }
 
+  // If a system is selected, show games for that system
+  if (selectedSystem) {
+    const games = gamesBySystem[selectedSystem] || [];
+    
+    return (
+      <div className="space-y-4">
+        {/* Back button and header */}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedSystem(null)}
+            className="shrink-0"
+          >
+            <ChevronLeft className="size-4 mr-1" />
+            Back to Systems
+          </Button>
+          <div className="flex items-center gap-3">
+            <div className="stat-glow-cyan">
+              {getSystemIcon(selectedSystem)}
+            </div>
+            <h3 className="text-xl font-bold stat-glow-cyan uppercase">
+              {selectedSystem}
+            </h3>
+            <Badge className="neon-badge" style={{
+              backgroundColor: 'var(--neon-purple)',
+              boxShadow: '0 0 8px var(--neon-purple)'
+            }}>
+              {games.length} games
+            </Badge>
+          </div>
+        </div>
+
+        {/* Compact game list */}
+        <div className="space-y-1.5">
+          {games.map(game => (
+            <Card key={game.id} className="p-2.5 neon-card hover:bg-accent/10 transition-colors" style={{
+              borderColor: 'var(--neon-orange)',
+              boxShadow: '0 0 6px var(--neon-orange)'
+            }}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-medium text-sm">{game.name}</h4>
+                    {game.region && (
+                      <Badge variant="outline" className="neon-badge text-xs py-0 h-5">
+                        {game.region}
+                      </Badge>
+                    )}
+                    {game.category && (
+                      <Badge variant="secondary" className="neon-badge text-xs py-0 h-5">
+                        {game.category}
+                      </Badge>
+                    )}
+                  </div>
+                  {game.romName && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      ROM: {game.romName}
+                    </p>
+                  )}
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRemoveGame(game.id)}
+                  className="shrink-0 h-7 w-7 p-0"
+                  style={{
+                    color: '#ff0055'
+                  }}
+                >
+                  <Trash2 className="size-3.5" />
+                  <span className="sr-only">Remove</span>
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Default view: Show systems grid
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <Card className="p-4 neon-card" style={{
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="p-3 neon-card" style={{
           borderColor: 'var(--neon-pink)',
           boxShadow: '0 0 10px var(--neon-pink)'
         }}>
-          <p className="text-sm text-muted-foreground uppercase tracking-wide">Total Wanted</p>
-          <p className="text-3xl font-bold stat-glow-pink">{wantedGames.length}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Wanted</p>
+          <p className="text-2xl font-bold stat-glow-pink">{wantedGames.length}</p>
         </Card>
-        <Card className="p-4 neon-card" style={{
+        <Card className="p-3 neon-card" style={{
           borderColor: 'var(--neon-cyan)',
           boxShadow: '0 0 10px var(--neon-cyan)'
         }}>
-          <p className="text-sm text-muted-foreground uppercase tracking-wide">Systems</p>
-          <p className="text-3xl font-bold stat-glow-cyan">{systemNames.length}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Systems</p>
+          <p className="text-2xl font-bold stat-glow-cyan">{systemNames.length}</p>
         </Card>
       </div>
 
-      {/* Games grouped by system */}
-      <div className="space-y-6">
+      {/* Compact systems grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
         {systemNames.map(systemName => (
-          <div key={systemName}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="stat-glow-cyan">
+          <Card 
+            key={systemName}
+            className="p-3 neon-card cursor-pointer hover:bg-accent/20 transition-all hover:scale-[1.02]"
+            style={{
+              borderColor: 'var(--neon-cyan)',
+              boxShadow: '0 0 8px var(--neon-cyan)'
+            }}
+            onClick={() => setSelectedSystem(systemName)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="stat-glow-cyan shrink-0">
                 {getSystemIcon(systemName)}
               </div>
-              <h3 className="text-xl font-bold stat-glow-cyan uppercase">
-                {systemName}
-              </h3>
-              <Badge className="neon-badge" style={{
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold stat-glow-cyan uppercase truncate">
+                  {systemName}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {gamesBySystem[systemName].length} game{gamesBySystem[systemName].length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <Badge className="neon-badge shrink-0" style={{
                 backgroundColor: 'var(--neon-purple)',
-                boxShadow: '0 0 8px var(--neon-purple)'
+                boxShadow: '0 0 6px var(--neon-purple)'
               }}>
-                {gamesBySystem[systemName].length} games
+                {gamesBySystem[systemName].length}
               </Badge>
             </div>
-
-            <div className="space-y-2">
-              {gamesBySystem[systemName].map(game => (
-                <Card key={game.id} className="p-4 neon-card" style={{
-                  borderColor: 'var(--neon-orange)',
-                  boxShadow: '0 0 8px var(--neon-orange)'
-                }}>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium mb-2">{game.name}</h4>
-                      
-                      <div className="flex items-center gap-2 flex-wrap text-sm">
-                        {game.region && (
-                          <Badge variant="outline" className="neon-badge">
-                            {game.region}
-                          </Badge>
-                        )}
-                        {game.category && (
-                          <Badge variant="secondary" className="neon-badge">
-                            {game.category}
-                          </Badge>
-                        )}
-                        {game.romName && (
-                          <span className="text-xs text-muted-foreground">
-                            Looking for: {game.romName}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onRemoveGame(game.id)}
-                      className="shrink-0"
-                      style={{
-                        color: '#ff0055'
-                      }}
-                    >
-                      <Trash2 className="size-4" />
-                      <span className="sr-only">Remove</span>
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
+          </Card>
         ))}
       </div>
     </div>
