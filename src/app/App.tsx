@@ -29,17 +29,11 @@ export default function App() {
     console.log('Available methods:', window.electronAPI ? Object.keys(window.electronAPI) : 'NOT AVAILABLE');
   }, []);
 
-  // DAT files with localStorage persistence
-  const [datFiles, setDatFiles] = useState<DatFile[]>(() => {
-    const saved = localStorage.getItem('datFiles');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // DAT files - no localStorage persistence (too large)
+  const [datFiles, setDatFiles] = useState<DatFile[]>([]);
 
-  // ROM lists with localStorage persistence
-  const [romLists, setRomLists] = useState<RomList[]>(() => {
-    const saved = localStorage.getItem('romLists');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // ROM lists - no localStorage persistence (too large)
+  const [romLists, setRomLists] = useState<RomList[]>([]);
 
   const [activeTab, setActiveTab] = useState('collection');
   
@@ -51,16 +45,6 @@ export default function App() {
     const saved = localStorage.getItem('wantedGames');
     return saved ? JSON.parse(saved) : [];
   });
-
-  // Save DAT files to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('datFiles', JSON.stringify(datFiles));
-  }, [datFiles]);
-
-  // Save ROM lists to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('romLists', JSON.stringify(romLists));
-  }, [romLists]);
 
   // Save want list to localStorage whenever it changes
   useEffect(() => {
