@@ -369,63 +369,180 @@ const SYSTEM_ALIASES: Record<string, string[]> = {
   'spectravideo': ['spectravideo', 'spectravideo sv-318'],
 };
 
-// Normalize a system name to match against aliases
+// Normalize system names for better matching
 const normalizeSystemName = (name: string): string => {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9]/g, '') // Remove special characters
-    .replace(/\s+/g, '');
+    .replace(/\.txt$/i, '') // Remove .txt extension
+    .replace(/\.dat$/i, '') // Remove .dat extension
+    .replace(/\.xml$/i, '') // Remove .xml extension
+    // Normalize common separators and formats
+    .replace(/[-_]/g, ' ') // Convert dashes and underscores to spaces
+    .replace(/\([^)]*\)/g, '') // Remove parentheses content
+    .replace(/\[[^\]]*\]/g, '') // Remove brackets content
+    // Normalize specific patterns
+    .replace(/\bno\s*intro\b/gi, '') // Remove "No-Intro", "NoIntro", etc.
+    .replace(/\bredump\b/gi, '') // Remove "Redump"
+    .replace(/\btosec\b/gi, '') // Remove "TOSEC"
+    .replace(/\bmame\b/gi, '') // Remove "MAME"
+    .replace(/\bv?\d+(\.\d+)*\b/g, '') // Remove version numbers
+    .replace(/\b(roms?|games?|list)\b/gi, '') // Remove "rom", "roms", "game", "games", "list"
+    .replace(/\b(standard|complete|collection|set)\b/gi, '') // Remove common collection terms
+    .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+    .replace(/\s+/g, ' ') // Normalize multiple spaces
+    .trim();
+};
+
+// Extract the core system identifier from a name
+const extractCoreSystemName = (name: string): string => {
+  const normalized = normalizeSystemName(name);
+  
+  // Split into words and take the most significant parts
+  const words = normalized.split(' ').filter(w => w.length > 0);
+  
+  // Common patterns to prioritize
+  const significantWords = words.filter(w => 
+    !['the', 'a', 'an', 'of', 'for', 'and', 'or'].includes(w)
+  );
+  
+  return significantWords.join(' ');
+};
+
+// Calculate similarity score between two strings (0-1)
+const calculateSimilarity = (str1: string, str2: string): number => {
+  const norm1 = normalizeSystemName(str1);
+  const norm2 = normalizeSystemName(str2);
+  
+  // Exact match
+  if (norm1 === norm2) return 1.0;
+  
+  // One contains the other
+  if (norm1.includes(norm2) || norm2.includes(norm1)) {
+    const longer = Math.max(norm1.length, norm2.length);
+    const shorter = Math.min(norm1.length, norm2.length);
+    return shorter / longer * 0.9; // High score but not perfect
+  }
+  
+  // Word-based matching
+  const words1 = norm1.split(' ');
+  const words2 = norm2.split(' ');
+  
+  const matchingWords = words1.filter(w => words2.includes(w)).length;
+  const totalWords = Math.max(words1.length, words2.length);
+  
+  if (matchingWords > 0) {
+    return (matchingWords / totalWords) * 0.8;
+  }
+  
+  return 0;
 };
 
 // Find matching system using comprehensive alias matching
 const findMatchingSystem = (filename: string, datFiles: DatFile[]): string | null => {
   const filenameLower = filename.toLowerCase().replace('.txt', '');
   const filenameNormalized = normalizeSystemName(filename);
+  const filenameCore = extractCoreSystemName(filename);
+  
+  let bestMatch: { datFile: DatFile; score: number } | null = null;
   
   for (const datFile of datFiles) {
     const systemLower = datFile.system.toLowerCase();
     const systemNormalized = normalizeSystemName(datFile.system);
+    const systemCore = extractCoreSystemName(datFile.system);
+    let score = 0;
     
-    // Direct match (case-insensitive)
-    if (filenameLower.includes(systemLower) || systemLower.includes(filenameLower)) {
-      return datFile.system;
+    // 1. Direct exact match (highest priority) - ONLY return early for perfect match
+    if (filenameLower === systemLower || filenameNormalized === systemNormalized) {
+      console.log(`🎯 Perfect match: "${filename}" to "${datFile.system}" (score: 1.00)`);
+      return datFile.system; // Immediate return ONLY for perfect match
     }
     
-    // Normalized match
-    if (filenameNormalized.includes(systemNormalized) || systemNormalized.includes(filenameNormalized)) {
-      return datFile.system;
+    // 2. Core system name match - but prefer MORE SPECIFIC matches
+    if (filenameCore === systemCore && filenameCore.length > 0) {
+      // Bonus for longer system names (more specific)
+      const lengthBonus = systemNormalized.length / 100; // Small bonus
+      score = 0.95 + lengthBonus;
     }
     
-    // Check aliases
+    // 3. Direct substring match - prefer when filename is MORE SPECIFIC than system
+    if (filenameLower.includes(systemLower)) {
+      // Filename contains system name
+      const specificity = systemLower.length / filenameLower.length;
+      score = Math.max(score, 0.85 + (specificity * 0.1));
+    } else if (systemLower.includes(filenameLower)) {
+      // System name contains filename (less ideal)
+      const specificity = filenameLower.length / systemLower.length;
+      score = Math.max(score, 0.80 + (specificity * 0.05));
+    }
+    
+    // 4. Normalized substring match
+    if (filenameNormalized.includes(systemNormalized)) {
+      const specificity = systemNormalized.length / filenameNormalized.length;
+      score = Math.max(score, 0.80 + (specificity * 0.1));
+    } else if (systemNormalized.includes(filenameNormalized)) {
+      const specificity = filenameNormalized.length / systemNormalized.length;
+      score = Math.max(score, 0.75 + (specificity * 0.05));
+    }
+    
+    // 5. Calculate similarity score
+    const similarityScore = calculateSimilarity(filename, datFile.system);
+    score = Math.max(score, similarityScore);
+    
+    // 6. Check aliases
     for (const [canonical, aliases] of Object.entries(SYSTEM_ALIASES)) {
       const canonicalNormalized = normalizeSystemName(canonical);
       
       // Check if DAT system matches canonical name or any alias
       const datMatchesCanonical = 
+        systemNormalized === canonicalNormalized ||
         systemNormalized.includes(canonicalNormalized) ||
         canonicalNormalized.includes(systemNormalized) ||
         aliases.some(alias => {
           const aliasNormalized = normalizeSystemName(alias);
-          return systemNormalized.includes(aliasNormalized) || aliasNormalized.includes(systemNormalized);
+          return systemNormalized === aliasNormalized ||
+                 systemNormalized.includes(aliasNormalized) || 
+                 aliasNormalized.includes(systemNormalized);
         });
       
       if (datMatchesCanonical) {
         // Check if filename matches canonical name or any alias
         const filenameMatchesCanonical =
+          filenameNormalized === canonicalNormalized ||
           filenameNormalized.includes(canonicalNormalized) ||
           canonicalNormalized.includes(filenameNormalized) ||
           aliases.some(alias => {
             const aliasNormalized = normalizeSystemName(alias);
-            return filenameNormalized.includes(aliasNormalized) || aliasNormalized.includes(filenameNormalized);
+            return filenameNormalized === aliasNormalized ||
+                   filenameNormalized.includes(aliasNormalized) || 
+                   aliasNormalized.includes(filenameNormalized);
           });
         
         if (filenameMatchesCanonical) {
-          return datFile.system;
+          score = Math.max(score, 0.85);
+        }
+      }
+    }
+    
+    // Track best match - CRITICAL: Prefer longer system names when scores are close
+    if (score > 0) {
+      if (!bestMatch || score > bestMatch.score) {
+        bestMatch = { datFile, score };
+      } else if (Math.abs(score - bestMatch.score) < 0.05) {
+        // Scores are very close - prefer the longer/more specific system name
+        if (datFile.system.length > bestMatch.datFile.system.length) {
+          bestMatch = { datFile, score };
         }
       }
     }
   }
   
+  // Return best match if score is above threshold (0.7 = 70% similarity)
+  if (bestMatch && bestMatch.score >= 0.7) {
+    console.log(`🎯 Matched "${filename}" to "${bestMatch.datFile.system}" (score: ${bestMatch.score.toFixed(2)})`);
+    return bestMatch.datFile.system;
+  }
+  
+  console.log(`❌ No match found for "${filename}" (best score: ${bestMatch?.score.toFixed(2) || 0})`);
   return null;
 };
 
