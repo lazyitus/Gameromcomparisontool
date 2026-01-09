@@ -1,0 +1,269 @@
+/* 🕹️ ARCADE CRT MODE - Applied when viewport ≤ 512px 🕹️ */
+
+@media (max-width: 512px) {
+  /* Base font scaling */
+  html {
+    font-size: 11px !important;
+  }
+
+  /* Compact title bar */
+  .title-bar {
+    height: 20px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .title-bar-icon {
+    width: 10px !important;
+    height: 10px !important;
+  }
+
+  .title-bar-text {
+    font-size: 9px !important;
+  }
+
+  .title-bar-button {
+    height: 16px !important;
+    width: 20px !important;
+  }
+
+  .title-bar-button-icon {
+    width: 8px !important;
+    height: 8px !important;
+  }
+
+  /* Main container */
+  .app-container {
+    padding: 8px !important;
+    padding-top: 28px !important;
+  }
+
+  /* Header */
+  .app-header {
+    margin-bottom: 12px !important;
+  }
+
+  .app-header-icons {
+    gap: 8px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .app-header-icon {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  .app-title {
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+  }
+
+  .app-subtitle {
+    display: none !important;
+  }
+
+  .app-description {
+    display: none !important;
+  }
+
+  /* Tab Navigation */
+  .tabs-list {
+    margin-bottom: 8px !important;
+    height: 28px !important;
+  }
+
+  .tab-trigger {
+    gap: 4px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    font-size: 10px !important;
+  }
+
+  .tab-icon {
+    display: none !important;
+  }
+
+  /* Cards */
+  .card-compact {
+    padding: 12px !important;
+  }
+
+  .card-mb {
+    margin-bottom: 16px !important;
+  }
+
+  /* Headings */
+  .heading-2 {
+    font-size: 14px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .heading-3 {
+    font-size: 12px !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Spacing */
+  .space-y-compact {
+    gap: 12px !important;
+  }
+
+  .space-y-compact > * + * {
+    margin-top: 12px !important;
+  }
+
+  /* Buttons */
+  .button-group {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .button-compact {
+    font-size: 10px !important;
+    height: 32px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .button-icon {
+    width: 12px !important;
+    height: 12px !important;
+    margin-right: 4px !important;
+  }
+
+  .button-text-hide {
+    display: none !important;
+  }
+
+  /* Help text */
+  .help-text {
+    display: none !important;
+  }
+
+  /* Want List */
+  .wantlist-empty {
+    padding: 24px !important;
+  }
+
+  .wantlist-empty-icon {
+    width: 32px !important;
+    height: 32px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .wantlist-empty-title {
+    font-size: 12px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .wantlist-empty-text {
+    font-size: 10px !important;
+  }
+
+  .wantlist-header {
+    gap: 8px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  .wantlist-back-button {
+    font-size: 10px !important;
+    height: 24px !important;
+  }
+
+  .wantlist-back-icon {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .wantlist-system-title {
+    font-size: 12px !important;
+  }
+
+  .wantlist-badge {
+    font-size: 9px !important;
+    height: 14px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  .wantlist-game-card {
+    padding: 6px !important;
+  }
+
+  .wantlist-game-title {
+    font-size: 10px !important;
+  }
+
+  .wantlist-game-badge {
+    font-size: 8px !important;
+    height: 12px !important;
+    padding: 0 4px !important;
+  }
+
+  .wantlist-game-rom {
+    font-size: 9px !important;
+    margin-top: 2px !important;
+    display: none !important;
+  }
+
+  .wantlist-delete-button {
+    height: 18px !important;
+    width: 18px !important;
+  }
+
+  .wantlist-delete-icon {
+    width: 10px !important;
+    height: 10px !important;
+  }
+
+  .wantlist-stats-card {
+    padding: 8px !important;
+  }
+
+  .wantlist-stats-label {
+    font-size: 9px !important;
+  }
+
+  .wantlist-stats-value {
+    font-size: 16px !important;
+  }
+
+  .wantlist-system-card {
+    padding: 8px !important;
+  }
+
+  .wantlist-system-icon {
+    font-size: 10px !important;
+  }
+
+  .wantlist-system-name {
+    font-size: 10px !important;
+  }
+
+  .wantlist-system-count {
+    font-size: 9px !important;
+    display: none !important;
+  }
+
+  .wantlist-list-spacing {
+    gap: 4px !important;
+  }
+
+  .wantlist-list-spacing > * + * {
+    margin-top: 4px !important;
+  }
+
+  .wantlist-container-spacing {
+    gap: 8px !important;
+  }
+
+  .wantlist-container-spacing > * + * {
+    margin-top: 8px !important;
+  }
+
+  /* Grid compact */
+  .grid-gap-compact {
+    gap: 6px !important;
+  }
+}

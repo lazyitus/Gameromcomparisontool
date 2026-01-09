@@ -40,13 +40,13 @@ export function WantList({ wantedGames, onRemoveGame }: WantListProps) {
 
   if (wantedGames.length === 0) {
     return (
-      <Card className="p-12 text-center neon-card max-[512px]:p-6">
-        <Package className="size-16 mx-auto mb-4 opacity-50 max-[512px]:size-10 max-[512px]:mb-2" style={{
+      <Card className="wantlist-empty p-12 text-center neon-card">
+        <Package className="wantlist-empty-icon size-16 mx-auto mb-4 opacity-50" style={{
           filter: 'drop-shadow(0 0 10px var(--neon-purple))',
           color: 'var(--neon-purple)'
         }} />
-        <h3 className="text-xl font-bold mb-2 stat-glow-purple max-[512px]:text-sm max-[512px]:mb-1">NO GAMES ON WANT LIST</h3>
-        <p className="text-muted-foreground max-[512px]:text-xs">
+        <h3 className="wantlist-empty-title text-xl font-bold mb-2 stat-glow-purple">NO GAMES ON WANT LIST</h3>
+        <p className="wantlist-empty-text text-muted-foreground">
           Add games from the ROM Collection tab to track what you need!
         </p>
       </Card>
@@ -58,26 +58,26 @@ export function WantList({ wantedGames, onRemoveGame }: WantListProps) {
     const games = gamesBySystem[selectedSystem] || [];
     
     return (
-      <div className="space-y-4 max-[512px]:space-y-2">
+      <div className="wantlist-container-spacing space-y-4">
         {/* Back button and header */}
-        <div className="flex items-center gap-3 max-[512px]:gap-2 max-[512px]:flex-col max-[512px]:items-start">
+        <div className="wantlist-header flex items-center gap-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setSelectedSystem(null)}
-            className="shrink-0 max-[512px]:text-xs max-[512px]:h-7"
+            className="wantlist-back-button shrink-0"
           >
-            <ChevronLeft className="size-4 mr-1 max-[512px]:size-3" />
-            <span className="max-[512px]:text-[10px]">Back</span>
+            <ChevronLeft className="wantlist-back-icon size-4 mr-1" />
+            Back
           </Button>
-          <div className="flex items-center gap-3 max-[512px]:gap-2">
-            <div className="stat-glow-cyan max-[512px]:text-xs">
+          <div className="flex items-center gap-3">
+            <div className="wantlist-system-icon stat-glow-cyan">
               {getSystemIcon(selectedSystem)}
             </div>
-            <h3 className="text-xl font-bold stat-glow-cyan uppercase max-[512px]:text-sm">
+            <h3 className="wantlist-system-title text-xl font-bold stat-glow-cyan uppercase">
               {selectedSystem}
             </h3>
-            <Badge className="neon-badge max-[512px]:text-[9px] max-[512px]:h-4 max-[512px]:px-1" style={{
+            <Badge className="wantlist-badge neon-badge" style={{
               backgroundColor: 'var(--neon-purple)',
               boxShadow: '0 0 8px var(--neon-purple)'
             }}>
@@ -87,29 +87,29 @@ export function WantList({ wantedGames, onRemoveGame }: WantListProps) {
         </div>
 
         {/* Compact game list */}
-        <div className="space-y-1.5 max-[512px]:space-y-1">
+        <div className="wantlist-list-spacing space-y-1.5">
           {games.map(game => (
-            <Card key={game.id} className="p-2.5 neon-card hover:bg-accent/10 transition-colors max-[512px]:p-1.5" style={{
+            <Card key={game.id} className="wantlist-game-card p-2.5 neon-card hover:bg-accent/10 transition-colors" style={{
               borderColor: 'var(--neon-orange)',
               boxShadow: '0 0 6px var(--neon-orange)'
             }}>
-              <div className="flex items-center justify-between gap-3 max-[512px]:gap-2">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap max-[512px]:gap-1">
-                    <h4 className="font-medium text-sm max-[512px]:text-[10px]">{game.name}</h4>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="wantlist-game-title font-medium text-sm">{game.name}</h4>
                     {game.region && (
-                      <Badge variant="outline" className="neon-badge text-xs py-0 h-5 max-[512px]:text-[8px] max-[512px]:h-3 max-[512px]:px-1">
+                      <Badge variant="outline" className="wantlist-game-badge neon-badge text-xs py-0 h-5">
                         {game.region}
                       </Badge>
                     )}
                     {game.category && (
-                      <Badge variant="secondary" className="neon-badge text-xs py-0 h-5 max-[512px]:text-[8px] max-[512px]:h-3 max-[512px]:px-1">
+                      <Badge variant="secondary" className="wantlist-game-badge neon-badge text-xs py-0 h-5">
                         {game.category}
                       </Badge>
                     )}
                   </div>
                   {game.romName && (
-                    <p className="text-xs text-muted-foreground mt-1 max-[512px]:text-[9px] max-[512px]:mt-0.5 max-[512px]:hidden">
+                    <p className="wantlist-game-rom text-xs text-muted-foreground mt-1">
                       ROM: {game.romName}
                     </p>
                   )}
@@ -119,12 +119,12 @@ export function WantList({ wantedGames, onRemoveGame }: WantListProps) {
                   variant="ghost"
                   size="sm"
                   onClick={() => onRemoveGame(game.id)}
-                  className="shrink-0 h-7 w-7 p-0 max-[512px]:h-5 max-[512px]:w-5"
+                  className="wantlist-delete-button shrink-0 h-7 w-7 p-0"
                   style={{
                     color: '#ff0055'
                   }}
                 >
-                  <Trash2 className="size-3.5 max-[512px]:size-2.5" />
+                  <Trash2 className="wantlist-delete-icon size-3.5" />
                   <span className="sr-only">Remove</span>
                 </Button>
               </div>
@@ -137,50 +137,50 @@ export function WantList({ wantedGames, onRemoveGame }: WantListProps) {
 
   // Default view: Show systems grid
   return (
-    <div className="space-y-4 max-[512px]:space-y-2">
+    <div className="wantlist-container-spacing space-y-4">
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 max-[512px]:gap-1.5">
-        <Card className="p-3 neon-card max-[512px]:p-2" style={{
+      <div className="grid grid-cols-2 gap-3 grid-gap-compact">
+        <Card className="wantlist-stats-card p-3 neon-card" style={{
           borderColor: 'var(--neon-pink)',
           boxShadow: '0 0 10px var(--neon-pink)'
         }}>
-          <p className="text-xs text-muted-foreground uppercase tracking-wide max-[512px]:text-[9px]">Total</p>
-          <p className="text-2xl font-bold stat-glow-pink max-[512px]:text-lg">{wantedGames.length}</p>
+          <p className="wantlist-stats-label text-xs text-muted-foreground uppercase tracking-wide">Total</p>
+          <p className="wantlist-stats-value text-2xl font-bold stat-glow-pink">{wantedGames.length}</p>
         </Card>
-        <Card className="p-3 neon-card max-[512px]:p-2" style={{
+        <Card className="wantlist-stats-card p-3 neon-card" style={{
           borderColor: 'var(--neon-cyan)',
           boxShadow: '0 0 10px var(--neon-cyan)'
         }}>
-          <p className="text-xs text-muted-foreground uppercase tracking-wide max-[512px]:text-[9px]">Systems</p>
-          <p className="text-2xl font-bold stat-glow-cyan max-[512px]:text-lg">{systemNames.length}</p>
+          <p className="wantlist-stats-label text-xs text-muted-foreground uppercase tracking-wide">Systems</p>
+          <p className="wantlist-stats-value text-2xl font-bold stat-glow-cyan">{systemNames.length}</p>
         </Card>
       </div>
 
       {/* Compact systems grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-[512px]:gap-1.5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 grid-gap-compact">
         {systemNames.map(systemName => (
           <Card 
             key={systemName}
-            className="p-3 neon-card cursor-pointer hover:bg-accent/20 transition-all hover:scale-[1.02] max-[512px]:p-2"
+            className="wantlist-system-card p-3 neon-card cursor-pointer hover:bg-accent/20 transition-all hover:scale-[1.02]"
             style={{
               borderColor: 'var(--neon-cyan)',
               boxShadow: '0 0 8px var(--neon-cyan)'
             }}
             onClick={() => setSelectedSystem(systemName)}
           >
-            <div className="flex items-center gap-3 max-[512px]:gap-2">
-              <div className="stat-glow-cyan shrink-0 max-[512px]:text-xs">
+            <div className="flex items-center gap-3">
+              <div className="wantlist-system-icon stat-glow-cyan shrink-0">
                 {getSystemIcon(systemName)}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-bold stat-glow-cyan uppercase truncate max-[512px]:text-[10px]">
+                <h3 className="wantlist-system-name text-sm font-bold stat-glow-cyan uppercase truncate">
                   {systemName}
                 </h3>
-                <p className="text-xs text-muted-foreground max-[512px]:text-[9px] max-[512px]:hidden">
+                <p className="wantlist-system-count text-xs text-muted-foreground">
                   {gamesBySystem[systemName].length} game{gamesBySystem[systemName].length !== 1 ? 's' : ''}
                 </p>
               </div>
-              <Badge className="neon-badge shrink-0 max-[512px]:text-[9px] max-[512px]:h-4 max-[512px]:px-1" style={{
+              <Badge className="wantlist-badge neon-badge shrink-0" style={{
                 backgroundColor: 'var(--neon-purple)',
                 boxShadow: '0 0 6px var(--neon-purple)'
               }}>

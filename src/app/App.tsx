@@ -9,6 +9,7 @@ import { Card } from './components/ui/card';
 import { Separator } from './components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Button } from './components/ui/button';
+import '../styles/arcade-compact.css';
 import {
   AlertDialog,
   AlertDialogAction,

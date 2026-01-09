@@ -1,5 +1,8 @@
 @custom-variant dark (&:is(.dark *));
 
+/* 🕹️ Custom breakpoint for arcade CRT displays */
+@custom-media --arcade-crt (max-width: 512px);
+
 :root {
   /* 🕹️ NEON 80s ARCADE THEME 🕹️ */
   
@@ -278,7 +281,7 @@
   }
 
   /* 🕹️ 512x448 ARCADE MONITOR OPTIMIZATION 🕹️ */
-  @media (max-width: 512px) {
+  @media (--arcade-crt) {
     html {
       font-size: 12px; /* Smaller base font */
     }
