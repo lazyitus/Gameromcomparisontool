@@ -276,4 +276,40 @@
   ::-webkit-scrollbar-corner {
     background: var(--arcade-dark);
   }
+
+  /* 🕹️ 512x448 ARCADE MONITOR OPTIMIZATION 🕹️ */
+  @media (max-width: 512px) {
+    html {
+      font-size: 12px; /* Smaller base font */
+    }
+
+    body {
+      /* Smaller grid for compact display */
+      background-size: 50px 50px, 50px 50px, 10px 10px, 10px 10px;
+    }
+
+    h1 {
+      font-size: 1.25rem; /* 15px at 12px base */
+      text-shadow: 0 0 5px var(--neon-pink), 0 0 10px var(--neon-pink);
+    }
+
+    h2 {
+      font-size: 1.1rem; /* 13.2px */
+      text-shadow: 0 0 5px var(--neon-cyan);
+    }
+
+    h3 {
+      font-size: 1rem; /* 12px */
+      text-shadow: 0 0 3px var(--neon-purple);
+    }
+
+    h4 {
+      font-size: 0.9rem; /* 10.8px */
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+  }
 }

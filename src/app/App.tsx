@@ -123,42 +123,42 @@ export default function App() {
       <TitleBar />
       
       {/* Main Content - Add top padding for title bar */}
-      <div className="container mx-auto py-8 px-4 max-w-7xl" style={{ paddingTop: 'calc(2rem + 32px)' }}>
+      <div className="container mx-auto py-8 px-4 max-w-7xl max-[512px]:py-2 max-[512px]:px-2" style={{ paddingTop: 'calc(2rem + 32px)' }}>
         {/* Header */}
-        <div className="mb-8 text-center">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <Gamepad2 className="size-10 text-primary animate-pulse" style={{
+        <div className="mb-8 text-center max-[512px]:mb-3">
+          <div className="flex items-center justify-center gap-3 mb-2 max-[512px]:gap-2 max-[512px]:mb-1">
+            <Gamepad2 className="size-10 text-primary animate-pulse max-[512px]:size-6" style={{
               filter: 'drop-shadow(0 0 10px var(--neon-pink)) drop-shadow(0 0 20px var(--neon-pink))'
             }} />
-            <h1 className="text-4xl font-bold uppercase tracking-wider">
+            <h1 className="text-4xl font-bold uppercase tracking-wider max-[512px]:text-lg">
               ROM ARCADE
             </h1>
-            <Gamepad2 className="size-10 text-primary animate-pulse" style={{
+            <Gamepad2 className="size-10 text-primary animate-pulse max-[512px]:size-6" style={{
               filter: 'drop-shadow(0 0 10px var(--neon-pink)) drop-shadow(0 0 20px var(--neon-pink))'
             }} />
           </div>
-          <p className="text-lg" style={{
+          <p className="text-lg max-[512px]:text-xs max-[512px]:hidden" style={{
             textShadow: '0 0 5px var(--neon-cyan)',
             color: 'var(--neon-cyan)'
           }}>
             ⚡ RETRO COLLECTION MANAGER ⚡
           </p>
-          <p className="text-sm mt-2 opacity-80">
+          <p className="text-sm mt-2 opacity-80 max-[512px]:hidden">
             Upload DAT files and ROM lists to track your ultimate collection
           </p>
         </div>
 
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-3 mb-6 max-[512px]:mb-2 max-[512px]:h-8">
             {tabs.map(tab => (
               <TabsTrigger 
                 key={tab.id} 
                 value={tab.id}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 max-[512px]:gap-1 max-[512px]:text-xs max-[512px]:px-1"
               >
-                {tab.icon}
-                <span>{tab.label}</span>
+                <span className="max-[512px]:hidden">{tab.icon}</span>
+                <span className="max-[512px]:text-[10px]">{tab.label}</span>
               </TabsTrigger>
             ))}
           </TabsList>
@@ -184,13 +184,13 @@ export default function App() {
           </TabsContent>
 
           <TabsContent value="setup">
-            <Card className="p-6 mb-8 neon-card">
-              <h2 className="text-2xl font-semibold mb-4 uppercase">⚙️ SETUP</h2>
+            <Card className="p-6 mb-8 neon-card max-[512px]:p-3 max-[512px]:mb-4">
+              <h2 className="text-2xl font-semibold mb-4 uppercase max-[512px]:text-lg max-[512px]:mb-2">⚙️ SETUP</h2>
               
-              <div className="space-y-6">
+              <div className="space-y-6 max-[512px]:space-y-3">
                 {/* DAT File Upload */}
                 <div>
-                  <h3 className="font-medium mb-3 text-lg">▶ 1. UPLOAD DAT FILES</h3>
+                  <h3 className="font-medium mb-3 text-lg max-[512px]:text-sm max-[512px]:mb-2">▶ 1. UPLOAD DAT FILES</h3>
                   <DatFileUploader 
                     onDatFilesLoaded={setDatFiles}
                     datFiles={datFiles}
@@ -204,7 +204,7 @@ export default function App() {
 
                 {/* ROM List Upload */}
                 <div>
-                  <h3 className="font-medium mb-3 text-lg">▶ 2. UPLOAD ROM LISTS</h3>
+                  <h3 className="font-medium mb-3 text-lg max-[512px]:text-sm max-[512px]:mb-2">▶ 2. UPLOAD ROM LISTS</h3>
                   <RomListUploader
                     onRomsLoaded={setRomLists}
                     romLists={romLists}
@@ -221,12 +221,12 @@ export default function App() {
                     }} />
                     
                     <div>
-                      <h3 className="font-medium mb-3 text-lg">▶ 3. START MATCHING</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
+                      <h3 className="font-medium mb-3 text-lg max-[512px]:text-sm max-[512px]:mb-2">▶ 3. START MATCHING</h3>
+                      <p className="text-sm text-muted-foreground mb-4 max-[512px]:text-xs max-[512px]:mb-2 max-[512px]:hidden">
                         Match your ROM files against the DAT database to see what you have and what's missing.
                       </p>
                       
-                      <div className="flex gap-3">
+                      <div className="flex gap-3 max-[512px]:flex-col max-[512px]:gap-2">
                         <Button
                           onClick={() => {
                             console.log('🚀 MATCH NEW BUTTON CLICKED');
@@ -236,14 +236,14 @@ export default function App() {
                             setTriggerMatching('new');
                             setActiveTab('collection');
                           }}
-                          className="neon-button flex-1"
+                          className="neon-button flex-1 max-[512px]:text-xs"
                           size="lg"
                           style={{
                             boxShadow: '0 0 15px var(--neon-cyan)',
                           }}
                         >
-                          <Gamepad2 className="mr-2 h-5 w-5" />
-                          MATCH NEW SYSTEMS
+                          <Gamepad2 className="mr-2 h-5 w-5 max-[512px]:h-3 max-[512px]:w-3 max-[512px]:mr-1" />
+                          <span className="max-[512px]:text-[10px]">MATCH NEW</span>
                         </Button>
                         
                         <Button
@@ -253,19 +253,19 @@ export default function App() {
                             setActiveTab('collection');
                           }}
                           variant="outline"
-                          className="flex-1"
+                          className="flex-1 max-[512px]:text-xs"
                           size="lg"
                           style={{
                             borderColor: 'var(--neon-pink)',
                             boxShadow: '0 0 10px var(--neon-pink)',
                           }}
                         >
-                          <Gamepad2 className="mr-2 h-5 w-5" />
-                          RE-MATCH ALL
+                          <Gamepad2 className="mr-2 h-5 w-5 max-[512px]:h-3 max-[512px]:w-3 max-[512px]:mr-1" />
+                          <span className="max-[512px]:text-[10px]">RE-MATCH ALL</span>
                         </Button>
                       </div>
                       
-                      <p className="text-xs text-muted-foreground mt-2">
+                      <p className="text-xs text-muted-foreground mt-2 max-[512px]:text-[9px] max-[512px]:mt-1 max-[512px]:hidden">
                         💡 <strong>Match New:</strong> Only matches systems you just added
                         <br />
                         💡 <strong>Re-Match All:</strong> Re-processes everything from scratch
