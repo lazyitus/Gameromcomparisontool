@@ -96,9 +96,52 @@ const normalizeForMatching = (name: string): string => {
 
 // sanitizeRegion is now imported from ./sanitizeRegion.tsx
 
+// Extract region code from name (USA, Europe, Japan, World, etc.)
+const extractRegion = (name: string): string | null => {
+  const regionMatch = name.match(/\((usa|europe|japan|world|en,fr,de,es,it|en,fr,de|en,fr|en|ja)\)/i);
+  return regionMatch ? regionMatch[1].toLowerCase() : null;
+};
+
+// Normalize region codes for comparison
+const normalizeRegion = (region: string): string => {
+  const regionMap: Record<string, string> = {
+    'usa': 'usa',
+    'us': 'usa',
+    'u': 'usa',
+    'europe': 'europe',
+    'eu': 'europe',
+    'e': 'europe',
+    'japan': 'japan',
+    'jp': 'japan',
+    'j': 'japan',
+    'world': 'world',
+    'w': 'world',
+  };
+  return regionMap[region.toLowerCase()] || region.toLowerCase();
+};
+
 // FIXED: More precise matching that prevents duplicate ROM assignments
 // This prevents "Final Fight" ROM from matching "Final Fight 2", "Final Fight 3", etc.
+// ALSO prevents "Super Mario World (USA)" from matching "Super Mario World (Europe)"
 const matchRomToGame = (romName: string, gameName: string): boolean => {
+  // CRITICAL: Check region compatibility FIRST before normalizing
+  const romRegion = extractRegion(romName);
+  const gameRegion = extractRegion(gameName);
+  
+  // If both have regions specified, they MUST match
+  if (romRegion && gameRegion) {
+    const romRegionNorm = normalizeRegion(romRegion);
+    const gameRegionNorm = normalizeRegion(gameRegion);
+    
+    // Special case: "World" matches everything
+    if (romRegionNorm !== 'world' && gameRegionNorm !== 'world') {
+      if (romRegionNorm !== gameRegionNorm) {
+        return false; // Different regions = no match
+      }
+    }
+  }
+  
+  // Now normalize and compare (regions will be stripped, but we already checked them)
   const romNorm = normalizeForMatching(romName);
   const gameNorm = normalizeForMatching(gameName);
   
