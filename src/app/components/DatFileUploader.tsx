@@ -25,6 +25,12 @@ interface Game {
   category?: string;
   cloneof?: string; // For arcade clones/revisions
   isParent?: boolean; // Parent game in a clone family
+  // Price tracking (in cents/pennies)
+  priceLoose?: number;
+  priceCib?: number;
+  priceNew?: number;
+  priceLastUpdated?: string; // ISO date string
+  priceChartingId?: string; // PriceCharting product ID
 }
 
 interface DatFileUploaderProps {

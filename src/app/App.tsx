@@ -7,6 +7,7 @@ import { WantList, type WantedGame } from './components/WantList';
 import { CrossPlatformGames } from './components/CrossPlatformGames';
 import { SystemAssociationManager } from './components/SystemAssociationManager';
 import { TitleBar } from './components/TitleBar';
+import { PriceChartingSettings } from './components/PriceChartingSettings';
 import { Card } from './components/ui/card';
 import { Separator } from './components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
@@ -340,6 +341,17 @@ export default function App() {
                     </div>
                   </>
                 )}
+                
+                {/* PriceCharting Settings */}
+                <Separator style={{ 
+                  backgroundColor: 'var(--neon-purple)',
+                  boxShadow: '0 0 5px var(--neon-purple)'
+                }} />
+                
+                <div>
+                  <h3 className="font-medium mb-3 text-lg max-[512px]:text-sm max-[512px]:mb-2">▶ 4. PRICE TRACKING (OPTIONAL)</h3>
+                  <PriceChartingSettings />
+                </div>
                 
                 {/* Clear All Data Button - Always visible */}
                 <Separator style={{ 
