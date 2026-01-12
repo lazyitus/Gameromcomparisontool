@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useCallback, memo, useRef } from 'react';
-import { CheckCircle2, XCircle, Star, Search, Filter, Download, LayoutGrid, Table, Gamepad2, ChevronDown, ChevronUp, Edit } from 'lucide-react';
+import { CheckCircle2, XCircle, Star, Search, Filter, Download, LayoutGrid, Table, Gamepad2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -9,11 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from './ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { GamePriceDisplay } from './GamePriceDisplay';
-import { CollectionValueStats } from './CollectionValueStats';
-import { PriceFetcher } from './PriceFetcher';
-import { ManualPriceEditor } from './ManualPriceEditor';
-import type { DatFile, Game } from './DatFileUploader';
+import type { DatFile } from './DatFileUploader';
 import type { RomList } from './RomListUploader';
 import { sanitizeRegion } from './sanitizeRegion';
 
@@ -295,9 +291,6 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
 
   // Track if this is the initial mount to prevent clearing regions on mount
   const isInitialMount = useRef(true);
-
-  // Price editor state
-  const [editingGame, setEditingGame] = useState<{ game: Game; systemName: string } | null>(null);
 
   // Save all filter states to localStorage
   useEffect(() => {
@@ -642,76 +635,6 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
     // Trigger re-match
     setMatchingState('idle');
   };
-
-  // Handle price updates from bulk fetch
-  const handlePricesUpdated = useCallback((updates: Map<string, { loose?: number; cib?: number; new?: number }>) => {
-    const updatedResults = comparisonResults.map(match => {
-      const gameKey = `${match.systemName}|${match.game.name}`;
-      const priceUpdate = updates.get(gameKey);
-      
-      if (priceUpdate) {
-        return {
-          ...match,
-          game: {
-            ...match.game,
-            priceLoose: priceUpdate.loose,
-            priceCib: priceUpdate.cib,
-            priceNew: priceUpdate.new,
-            priceLastUpdated: new Date().toISOString(),
-          }
-        };
-      }
-      return match;
-    });
-    
-    setComparisonResults(updatedResults);
-    
-    // Also update DAT files with prices for persistence
-    const updatedDatFiles = datFiles.map(datFile => ({
-      ...datFile,
-      games: datFile.games.map(game => {
-        const gameKey = `${datFile.system}|${game.name}`;
-        const priceUpdate = updates.get(gameKey);
-        
-        if (priceUpdate) {
-          return {
-            ...game,
-            priceLoose: priceUpdate.loose,
-            priceCib: priceUpdate.cib,
-            priceNew: priceUpdate.new,
-            priceLastUpdated: new Date().toISOString(),
-          };
-        }
-        return game;
-      })
-    }));
-    
-    // Note: We can't directly update datFiles from this component,
-    // but the prices are stored in comparisonResults which persists to localStorage
-  }, [comparisonResults, setComparisonResults, datFiles]);
-
-  // Handle manual price edit
-  const handleManualPriceUpdate = useCallback((prices: { loose?: number; cib?: number; new?: number }) => {
-    if (!editingGame) return;
-    
-    const updatedResults = comparisonResults.map(match => {
-      if (match.systemName === editingGame.systemName && match.game.name === editingGame.game.name) {
-        return {
-          ...match,
-          game: {
-            ...match.game,
-            priceLoose: prices.loose,
-            priceCib: prices.cib,
-            priceNew: prices.new,
-            priceLastUpdated: new Date().toISOString(),
-          }
-        };
-      }
-      return match;
-    });
-    
-    setComparisonResults(updatedResults);
-  }, [editingGame, comparisonResults, setComparisonResults]);
 
   // Start matching process - INCREMENTAL VERSION with REAL-TIME PROGRESS
   const startMatching = async () => {
@@ -1466,46 +1389,29 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
 
       {/* Results */}
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-[512px]:grid-cols-2">
-          <TabsTrigger value="all" className="text-xs max-[512px]:text-[10px]">All Games</TabsTrigger>
-          <TabsTrigger value="have" className="text-xs max-[512px]:text-[10px]">Have ({stats.have})</TabsTrigger>
-          <TabsTrigger value="missing" className="text-xs max-[512px]:text-[10px]">Missing ({stats.missing})</TabsTrigger>
-          <TabsTrigger value="value" className="text-xs max-[512px]:text-[10px]">💰 Value</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="all" className="text-xs">All Games</TabsTrigger>
+          <TabsTrigger value="have" className="text-xs">Have ({stats.have})</TabsTrigger>
+          <TabsTrigger value="missing" className="text-xs">Missing ({stats.missing})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="space-y-1 mt-3">
-          <GameList games={filteredResults} viewMode={viewMode} regions={regions} onAddToWantList={onAddToWantList} wantedGameIds={wantedGameIds} onEditPrice={setEditingGame} />
+          <GameList games={filteredResults} viewMode={viewMode} regions={regions} onAddToWantList={onAddToWantList} wantedGameIds={wantedGameIds} />
         </TabsContent>
 
         <TabsContent value="have" className="space-y-1 mt-3">
-          <GameList games={filteredResults.filter(m => m.hasRom)} viewMode={viewMode} regions={regions} onAddToWantList={onAddToWantList} wantedGameIds={wantedGameIds} onEditPrice={setEditingGame} />
+          <GameList games={filteredResults.filter(m => m.hasRom)} viewMode={viewMode} regions={regions} onAddToWantList={onAddToWantList} wantedGameIds={wantedGameIds} />
         </TabsContent>
 
         <TabsContent value="missing" className="space-y-1 mt-3">
-          <GameList games={filteredResults.filter(m => !m.hasRom)} viewMode={viewMode} regions={regions} onAddToWantList={onAddToWantList} wantedGameIds={wantedGameIds} onEditPrice={setEditingGame} />
-        </TabsContent>
-
-        <TabsContent value="value" className="space-y-3 mt-3">
-          <PriceFetcher games={filteredResults} onPricesUpdated={handlePricesUpdated} />
-          <CollectionValueStats games={filteredResults} />
+          <GameList games={filteredResults.filter(m => !m.hasRom)} viewMode={viewMode} regions={regions} onAddToWantList={onAddToWantList} wantedGameIds={wantedGameIds} />
         </TabsContent>
       </Tabs>
-
-      {/* Price Editor Modal */}
-      {editingGame && (
-        <ManualPriceEditor
-          game={editingGame.game}
-          systemName={editingGame.systemName}
-          isOpen={true}
-          onClose={() => setEditingGame(null)}
-          onSave={handleManualPriceUpdate}
-        />
-      )}
     </div>
   );
 }
 
-function GameList({ games, viewMode, regions, onAddToWantList, wantedGameIds, onEditPrice }: {
+function GameList({ games, viewMode, regions, onAddToWantList, wantedGameIds }: {
   games: GameMatch[];
   viewMode: 'cards' | 'table';
   regions: string[];
@@ -1518,7 +1424,6 @@ function GameList({ games, viewMode, regions, onAddToWantList, wantedGameIds, on
     romName?: string;
   }) => void;
   wantedGameIds?: Set<string>;
-  onEditPrice?: (game: { game: Game; systemName: string }) => void;
 }) {
   if (games.length === 0) {
     return (
@@ -1573,8 +1478,6 @@ function GameList({ games, viewMode, regions, onAddToWantList, wantedGameIds, on
                 )}
               </div>
 
-              <GamePriceDisplay game={match.game} compact={true} />
-
               {match.game.rom && !match.hasRom && (
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Looking for: {match.game.rom.name}
@@ -1605,30 +1508,15 @@ function GameList({ games, viewMode, regions, onAddToWantList, wantedGameIds, on
               )}
             </div>
 
-            <div className="flex flex-col gap-1 shrink-0">
-              {match.hasRom && (
-                <>
-                  <Badge className="stat-glow-green text-xs py-0 h-5" style={{
-                    backgroundColor: 'var(--neon-green)',
-                    borderColor: 'var(--neon-green)',
-                    boxShadow: '0 0 10px var(--neon-green)'
-                  }}>
-                    HAVE
-                  </Badge>
-                  {onEditPrice && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => onEditPrice({ game: match.game, systemName: match.systemName })}
-                      className="h-5 px-1 text-xs"
-                      title="Edit price"
-                    >
-                      <Edit className="size-3" />
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
+            {match.hasRom && (
+              <Badge className="shrink-0 stat-glow-green text-xs py-0 h-5" style={{
+                backgroundColor: 'var(--neon-green)',
+                borderColor: 'var(--neon-green)',
+                boxShadow: '0 0 10px var(--neon-green)'
+              }}>
+                HAVE
+              </Badge>
+            )}
             
             {!match.hasRom && onAddToWantList && (
               <Button
