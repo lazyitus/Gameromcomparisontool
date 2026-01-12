@@ -96,26 +96,57 @@ const normalizeForMatching = (name: string): string => {
 
 // sanitizeRegion is now imported from ./sanitizeRegion.tsx
 
-// Extract region code from name (USA, Europe, Japan, World, etc.)
+// Extract region code from name (USA, Europe, Japan, World, France, Germany, etc.)
 const extractRegion = (name: string): string | null => {
-  const regionMatch = name.match(/\((usa|europe|japan|world|en,fr,de,es,it|en,fr,de|en,fr|en|ja)\)/i);
+  // Match common region patterns in parentheses
+  const regionMatch = name.match(/\((usa|europe|japan|world|france|germany|spain|italy|uk|korea|australia|brazil|canada|netherlands|sweden|denmark|norway|finland|asia|china|taiwan|hong kong|en,fr,de,es,it|en,fr,de|en,fr|en|ja|fr|de|es|it)\)/i);
   return regionMatch ? regionMatch[1].toLowerCase() : null;
 };
 
 // Normalize region codes for comparison
+// Maps country-specific codes to their parent regions
 const normalizeRegion = (region: string): string => {
   const regionMap: Record<string, string> = {
+    // USA variants
     'usa': 'usa',
     'us': 'usa',
     'u': 'usa',
+    // Europe and European countries
     'europe': 'europe',
     'eu': 'europe',
     'e': 'europe',
+    'france': 'europe',
+    'fr': 'europe',
+    'germany': 'europe',
+    'de': 'europe',
+    'spain': 'europe',
+    'es': 'europe',
+    'italy': 'europe',
+    'it': 'europe',
+    'uk': 'europe',
+    'netherlands': 'europe',
+    'sweden': 'europe',
+    'denmark': 'europe',
+    'norway': 'europe',
+    'finland': 'europe',
+    // Japan variants
     'japan': 'japan',
     'jp': 'japan',
     'j': 'japan',
+    'ja': 'japan',
+    // Asia variants
+    'asia': 'asia',
+    'korea': 'asia',
+    'china': 'asia',
+    'taiwan': 'asia',
+    'hong kong': 'asia',
+    // World (matches everything)
     'world': 'world',
     'w': 'world',
+    // Other regions
+    'australia': 'australia',
+    'brazil': 'brazil',
+    'canada': 'usa', // Canada often uses USA ROMs
   };
   return regionMap[region.toLowerCase()] || region.toLowerCase();
 };

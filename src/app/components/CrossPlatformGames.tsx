@@ -43,6 +43,11 @@ function parseGameName(name: string): string {
     .replace(/^The\s+/i, '')
     .trim();
   
+  // DEBUG: Log Aladdin parsing
+  if (name.toLowerCase().includes('aladdin')) {
+    console.log('🔍 Parsing game name:', { original: name, baseName });
+  }
+  
   return baseName;
 }
 
@@ -68,49 +73,31 @@ export function CrossPlatformGames({ datFiles, romLists, comparisonResults }: Cr
   // Build cross-platform game database
   const crossPlatformGames = useMemo(() => {
     console.log('🔍 Building cross-platform database...');
+    console.log('📊 Comparison results count:', comparisonResults.length);
     
     const gameMap = new Map<string, GamePlatform[]>();
 
-    // Process each comparison result
+    // FIXED: Process each GameMatch (not grouped by system)
     comparisonResults.forEach(result => {
-      if (!result) return;
+      if (!result || !result.game) return;
 
       const systemName = result.systemName || 'Unknown System';
+      const gameName = result.game.name || result.game.description || '';
+      const baseName = parseGameName(gameName);
       
-      // Process games we have
-      result.haveGames?.forEach((game: any) => {
-        const baseName = parseGameName(game.name);
-        if (!baseName) return;
+      if (!baseName) return;
 
-        if (!gameMap.has(baseName)) {
-          gameMap.set(baseName, []);
-        }
+      if (!gameMap.has(baseName)) {
+        gameMap.set(baseName, []);
+      }
 
-        gameMap.get(baseName)!.push({
-          system: systemName,
-          fullName: game.name,
-          owned: true,
-          region: game.region,
-          category: game.category,
-        });
-      });
-
-      // Process games we don't have
-      result.dontHaveGames?.forEach((game: any) => {
-        const baseName = parseGameName(game.name);
-        if (!baseName) return;
-
-        if (!gameMap.has(baseName)) {
-          gameMap.set(baseName, []);
-        }
-
-        gameMap.get(baseName)!.push({
-          system: systemName,
-          fullName: game.name,
-          owned: false,
-          region: game.region,
-          category: game.category,
-        });
+      // Add this game to the map
+      gameMap.get(baseName)!.push({
+        system: systemName,
+        fullName: gameName,
+        owned: result.hasRom, // Use hasRom flag from GameMatch
+        region: result.game.region,
+        category: result.game.category,
       });
     });
 
@@ -127,6 +114,17 @@ export function CrossPlatformGames({ datFiles, romLists, comparisonResults }: Cr
         }
         systemMap.get(platform.system)!.push(platform);
       });
+
+      // DEBUG: Log Aladdin specifically
+      if (baseName.toLowerCase().includes('aladdin')) {
+        console.log('🔍 ALADDIN FOUND:', {
+          baseName,
+          systemCount: systemMap.size,
+          systems: Array.from(systemMap.keys()),
+          platforms: platforms,
+          minPlatforms,
+        });
+      }
 
       // Only include if game exists on multiple systems
       if (systemMap.size >= minPlatforms) {
