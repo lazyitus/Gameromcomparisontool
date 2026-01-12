@@ -46,6 +46,8 @@ interface GameComparisonProps {
   wantedGameIds?: Set<string>;
   triggerMatching?: 'new' | 'all' | null;
   setTriggerMatching?: (value: 'new' | 'all' | null) => void;
+  comparisonResults?: GameMatch[];
+  setComparisonResults?: (results: GameMatch[]) => void;
 }
 
 // Move helper functions OUTSIDE component to prevent recreation
@@ -193,7 +195,7 @@ const hasRevisionTag = (name: string, game?: any): boolean => {
          /revision\s*[a-z]/i.test(lowerName);
 };
 
-export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGameIds, triggerMatching, setTriggerMatching }: GameComparisonProps) {
+export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGameIds, triggerMatching, setTriggerMatching, comparisonResults: externalComparisonResults, setComparisonResults: externalSetComparisonResults }: GameComparisonProps) {
   // Filter states with localStorage persistence
   const [searchQuery, setSearchQuery] = useState<string>(() => {
     return localStorage.getItem('filterSearchQuery') || '';
@@ -287,10 +289,14 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
   
   const [matchProgress, setMatchProgress] = useState({ current: 0, total: 0, system: '' });
   
-  const [comparisonResults, setComparisonResults] = useState<GameMatch[]>(() => {
+  // Use lifted state if provided, otherwise use local state
+  const [localComparisonResults, setLocalComparisonResults] = useState<GameMatch[]>(() => {
     const saved = localStorage.getItem('comparisonResults');
     return saved ? JSON.parse(saved) : [];
   });
+  
+  const comparisonResults = externalComparisonResults ?? localComparisonResults;
+  const setComparisonResults = externalSetComparisonResults ?? setLocalComparisonResults;
 
   // Auto-reset selectedSystem if the currently selected system no longer exists
   useEffect(() => {

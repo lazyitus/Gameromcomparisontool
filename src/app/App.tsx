@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Gamepad2, ListChecks, Settings, Trash2 } from 'lucide-react';
+import { Gamepad2, ListChecks, Settings, Trash2, Globe } from 'lucide-react';
 import { DatFileUploader, type DatFile } from './components/DatFileUploader';
 import { RomListUploader, type RomList } from './components/RomListUploader';
 import { GameComparison } from './components/GameComparison';
 import { WantList, type WantedGame } from './components/WantList';
+import { CrossPlatformGames } from './components/CrossPlatformGames';
 import { TitleBar } from './components/TitleBar';
 import { Card } from './components/ui/card';
 import { Separator } from './components/ui/separator';
@@ -47,10 +48,23 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Comparison results state with localStorage persistence
+  const [comparisonResults, setComparisonResults] = useState<any[]>(() => {
+    const saved = localStorage.getItem('comparisonResults');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Save want list to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('wantedGames', JSON.stringify(wantedGames));
   }, [wantedGames]);
+
+  // Save comparison results to localStorage whenever they change
+  useEffect(() => {
+    if (comparisonResults.length > 0) {
+      localStorage.setItem('comparisonResults', JSON.stringify(comparisonResults));
+    }
+  }, [comparisonResults]);
 
   // Auto-remove wanted games when they appear in the collection
   useEffect(() => {
@@ -107,6 +121,11 @@ export default function App() {
       icon: <Gamepad2 className="size-4" />,
     },
     {
+      id: 'crossplatform',
+      label: 'Cross-Platform',
+      icon: <Globe className="size-4" />,
+    },
+    {
       id: 'wantlist',
       label: 'Want List',
       icon: <ListChecks className="size-4" />,
@@ -151,7 +170,7 @@ export default function App() {
 
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 mb-6 max-[512px]:mb-2 max-[512px]:h-8">
+          <TabsList className="grid w-full grid-cols-4 mb-6 max-[512px]:mb-2 max-[512px]:h-8">
             {tabs.map(tab => (
               <TabsTrigger 
                 key={tab.id} 
@@ -173,6 +192,17 @@ export default function App() {
               wantedGameIds={wantedGameIds}
               triggerMatching={triggerMatching}
               setTriggerMatching={setTriggerMatching}
+              comparisonResults={comparisonResults}
+              setComparisonResults={setComparisonResults}
+            />
+          </TabsContent>
+
+          {/* Cross-Platform Tab */}
+          <TabsContent value="crossplatform">
+            <CrossPlatformGames 
+              datFiles={datFiles}
+              romLists={romLists}
+              comparisonResults={comparisonResults}
             />
           </TabsContent>
 
