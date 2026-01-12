@@ -96,7 +96,8 @@ const normalizeForMatching = (name: string): string => {
 
 // sanitizeRegion is now imported from ./sanitizeRegion.tsx
 
-// More aggressive matching that handles partial matches better
+// FIXED: More precise matching that prevents duplicate ROM assignments
+// This prevents "Final Fight" ROM from matching "Final Fight 2", "Final Fight 3", etc.
 const matchRomToGame = (romName: string, gameName: string): boolean => {
   const romNorm = normalizeForMatching(romName);
   const gameNorm = normalizeForMatching(gameName);
@@ -106,8 +107,7 @@ const matchRomToGame = (romName: string, gameName: string): boolean => {
     return true;
   }
   
-  // CRITICAL: Handle spacing differences (e.g., "Dino City" vs "DinoCity")
-  // Remove ALL spaces and compare
+  // Handle spacing differences (e.g., "Dino City" vs "DinoCity")
   const romNoSpaces = romNorm.replace(/\s+/g, '');
   const gameNoSpaces = gameNorm.replace(/\s+/g, '');
   
@@ -115,50 +115,30 @@ const matchRomToGame = (romName: string, gameName: string): boolean => {
     return true;
   }
   
-  // CRITICAL: Handle subtitle cases (e.g., "GunForce" vs "GunForce - Battle Fire Engulfed Terror Island")
-  // Check if the shorter name appears at the START of the longer name (subtitle scenario)
-  const shorter = romNorm.length < gameNorm.length ? romNorm : gameNorm;
-  const longer = romNorm.length >= gameNorm.length ? romNorm : gameNorm;
+  // CRITICAL FIX: Check length similarity to prevent false matches
+  // "Final Fight" (10 chars) vs "Final Fight 2" (13 chars) = 0.77 ratio (too different)
+  // "Final Fight" (10 chars) vs "Final Fight Europe" (18 chars) = 0.56 ratio (too different)
+  const lengthRatio = Math.min(romNorm.length, gameNorm.length) / Math.max(romNorm.length, gameNorm.length);
   
-  // If shorter string starts the longer string, it's likely the same game with/without subtitle
-  if (shorter.length >= 5 && longer.startsWith(shorter + ' ')) {
-    return true;
+  // If lengths differ by more than 15%, they're likely different games
+  if (lengthRatio < 0.85) {
+    return false;
   }
   
-  // Also check without spaces for the start match
-  const shorterNoSpaces = romNoSpaces.length < gameNoSpaces.length ? romNoSpaces : gameNoSpaces;
-  const longerNoSpaces = romNoSpaces.length >= gameNoSpaces.length ? romNoSpaces : gameNoSpaces;
+  // At this point lengths are similar, so check word-level matching
+  const romWords = romNorm.split(' ').filter(w => w.length > 1);
+  const gameWords = gameNorm.split(' ').filter(w => w.length > 1);
   
-  if (shorterNoSpaces.length >= 5 && longerNoSpaces.startsWith(shorterNoSpaces)) {
-    return true;
+  // Both must have same number of significant words
+  if (romWords.length !== gameWords.length) {
+    return false;
   }
   
-  // Check if one is contained in the other (for cases with subtitles, etc.)
-  // Lower threshold to 7 chars to catch more games
-  if (shorter.length >= 7 && longer.includes(shorter)) {
-    return true;
-  }
+  // All words must match
+  const allWordsMatch = romWords.every(word => gameWords.includes(word)) &&
+                        gameWords.every(word => romWords.includes(word));
   
-  // Also check without spaces for substring matching
-  if (shorterNoSpaces.length >= 7 && longerNoSpaces.includes(shorterNoSpaces)) {
-    return true;
-  }
-  
-  // Split into words and check if all significant words match
-  const romWords = romNorm.split(' ').filter(w => w.length > 2); // Ignore short words like "a", "of", "the"
-  const gameWords = gameNorm.split(' ').filter(w => w.length > 2);
-  
-  // If we have at least 2 words and they all match, it's a match
-  if (romWords.length >= 2 && gameWords.length >= 2) {
-    const allRomWordsInGame = romWords.every(word => gameWords.includes(word));
-    const allGameWordsInRom = gameWords.every(word => romWords.includes(word));
-    
-    if (allRomWordsInGame || allGameWordsInRom) {
-      return true;
-    }
-  }
-  
-  return false;
+  return allWordsMatch;
 };
 
 const isOfficialRelease = (name: string): boolean => {
@@ -634,6 +614,9 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
 
       setMatchProgress({ current: processedGames, total: totalGames, system: datFile.system });
 
+      // CRITICAL: Track which ROMs have already been matched to prevent duplicates
+      const matchedRomNames = new Set<string>();
+
       // Process games in batches of 50 to allow UI updates
       const batchSize = 50;
       for (let i = 0; i < datFile.games.length; i += batchSize) {
@@ -650,18 +633,25 @@ export function GameComparison({ datFiles, romLists, onAddToWantList, wantedGame
           const gameNameToMatch = game.name;
           
           if (gameNameToMatch) {
-            const exactMatch = romFiles.find(rom => rom.name === gameNameToMatch);
+            // First try exact match
+            const exactMatch = romFiles.find(rom => 
+              rom.name === gameNameToMatch && !matchedRomNames.has(rom.name)
+            );
             if (exactMatch) {
               hasRom = true;
               matchedRom = exactMatch;
               matchMethod = 'exact';
+              matchedRomNames.add(exactMatch.name); // Mark as used
             } else {
-              // Try improved fuzzy matching with the new algorithm
-              const fuzzyMatch = romFiles.find(rom => matchRomToGame(rom.name, gameNameToMatch));
+              // Try fuzzy matching, but exclude already-matched ROMs
+              const fuzzyMatch = romFiles.find(rom => 
+                !matchedRomNames.has(rom.name) && matchRomToGame(rom.name, gameNameToMatch)
+              );
               if (fuzzyMatch) {
                 hasRom = true;
                 matchedRom = fuzzyMatch;
                 matchMethod = 'filename';
+                matchedRomNames.add(fuzzyMatch.name); // Mark as used
               }
             }
           }

@@ -5,6 +5,7 @@ import { RomListUploader, type RomList } from './components/RomListUploader';
 import { GameComparison } from './components/GameComparison';
 import { WantList, type WantedGame } from './components/WantList';
 import { CrossPlatformGames } from './components/CrossPlatformGames';
+import { SystemAssociationManager } from './components/SystemAssociationManager';
 import { TitleBar } from './components/TitleBar';
 import { Card } from './components/ui/card';
 import { Separator } from './components/ui/separator';
@@ -97,6 +98,25 @@ export default function App() {
 
   const removeFromWantList = (id: string) => {
     setWantedGames(wantedGames.filter(g => g.id !== id));
+  };
+
+  // Handle manual system associations
+  const handleUpdateAssociation = (datSystemName: string, romListSystemName: string) => {
+    console.log(`🔗 Manually associating DAT "${datSystemName}" with ROM list "${romListSystemName}"`);
+    
+    // Update the DAT file's system name to match the ROM list
+    setDatFiles(prev => prev.map(dat => 
+      dat.system === datSystemName 
+        ? { ...dat, system: romListSystemName }
+        : dat
+    ));
+    
+    // Clear processed tracking to allow re-matching with new association
+    const processedDats = JSON.parse(localStorage.getItem('processedDats') || '[]');
+    const updatedProcessedDats = processedDats.filter((name: string) => name !== datSystemName);
+    localStorage.setItem('processedDats', JSON.stringify(updatedProcessedDats));
+    
+    console.log(`✅ Association updated. You can now run "MATCH NEW" to process this system.`);
   };
 
   const clearAllData = () => {
@@ -242,6 +262,22 @@ export default function App() {
                     datFiles={datFiles}
                   />
                 </div>
+
+                {/* System Association Manager - Show if we have DAT files */}
+                {datFiles.length > 0 && (
+                  <>
+                    <Separator style={{ 
+                      backgroundColor: 'var(--neon-purple)',
+                      boxShadow: '0 0 5px var(--neon-purple)'
+                    }} />
+                    
+                    <SystemAssociationManager
+                      datFiles={datFiles}
+                      romLists={romLists}
+                      onUpdateAssociation={handleUpdateAssociation}
+                    />
+                  </>
+                )}
 
                 {/* Matching Buttons */}
                 {datFiles.length > 0 && romLists.length > 0 && (
